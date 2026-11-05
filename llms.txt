@@ -1,0 +1,39 @@
+# Diagram Editor
+
+> Công cụ vẽ diagram dạng whiteboard dành cho thiết kế phần mềm, chạy hoàn toàn trên trình duyệt (HTML/CSS/JavaScript thuần, không cần build, không cần tài khoản). Hỗ trợ Flowchart, BPMN 2.0, UML 2.5 và ERD. Mọi đối tượng được quản lý bằng JSON; xuất JSON, SVG, PNG và nhúng SVG trực tiếp vào Markdown.
+
+## Chức năng chính
+
+- 3 chế độ: Flowchart (ISO 5807), BPMN 2.0 (OMG / ISO/IEC 19510), UML 2.5 (OMG / ISO/IEC 19505, kèm ERD). Mỗi chế độ chỉ hiển thị ký hiệu của mình.
+- 99 ký hiệu chuẩn, 27 kiểu đường nối: sequence flow, message flow, association, generalization, realization, dependency, aggregation, composition, include, extend, sync/async/return message, crow's foot (1:1, 1:N, 0..N)…
+- Mẫu UML nhóm theo các quá trình kỹ thuật của ISO/IEC/IEEE 12207: phân tích nghiệp vụ (Activity), yêu cầu bên liên quan (Use Case), yêu cầu phần mềm (Domain model), kiến trúc (Package, Component), thiết kế (Class, Sequence, Communication, State Machine, ERD), tích hợp & chuyển giao (Deployment), kiểm định (Activity kiểm thử CI), bảo trì (State Machine yêu cầu thay đổi).
+- Whiteboard: canvas vô hạn, zoom/pan, lưới, bắt dính, sticky note, undo/redo, copy/paste, căn chỉnh, chế độ tối.
+- Tab Trợ giúp giải thích ý nghĩa từng ký hiệu và mũi tên theo quy ước.
+- Nhúng vào Markdown: SVG inline (`<div><svg>…</svg></div>`, một dòng) hoặc ảnh PNG base64 (`![…](data:image/png;base64,…)`).
+
+## Định dạng dữ liệu (JSON)
+
+```json
+{
+  "version": 1,
+  "meta": { "name": "Tên diagram", "mode": "flowchart | bpmn | uml" },
+  "nodes": [
+    { "id": "n1", "type": "flow.process", "x": 100, "y": 80, "w": 140, "h": 70, "text": "Xử lý", "style": {} }
+  ],
+  "edges": [
+    { "id": "e1", "type": "flow.arrow", "source": "n1", "target": "n2", "label": "",
+      "sourcePort": "right", "targetPort": "left", "routing": "orthogonal" }
+  ]
+}
+```
+
+- `node.type`: mã hình có tiền tố nhóm, ví dụ `flow.decision`, `bpmn.userTask`, `bpmn.exclusiveGateway`, `uml.class`, `uml.lifeline`, `erd.table`.
+- `edge.type`: kiểu đường nối, ví dụ `bpmn.sequenceFlow`, `bpmn.messageFlow`, `uml.generalization`, `uml.composition`, `uml.syncMessage`, `erd.oneToMany`.
+- Với `uml.class`, `uml.state`, `erd.table`: dùng một dòng `--` trong `text` để chia các ngăn (tên / thuộc tính / thao tác).
+- Sequence diagram: `sourceAnchor` / `targetAnchor` (0..1) là vị trí dọc của message trên lifeline.
+- `style` (tuỳ chọn): `fill`, `stroke`, `strokeWidth`, `dash` (`solid` | `dashed` | `dotted` | `dashdot`), `textColor`, `fontSize`, `fontWeight`, `fontStyle`, `align`; edge còn có `startArrow`, `endArrow`.
+
+## Tài liệu
+
+- [README](README.md): hướng dẫn đầy đủ, danh sách `type`, phím tắt, cấu trúc mã nguồn.
+- [Ứng dụng](index.html)

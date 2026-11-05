@@ -1,0 +1,17 @@
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor
+.vscode/
+.idea/
+*.swp
+
+# Node (nếu sau này dùng công cụ build/test)
+node_modules/
+npm-debug.log*
+
+# File tạm / xuất thử
+*.tmp
+*.log

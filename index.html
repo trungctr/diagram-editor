@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Diagram Editor – Vẽ BPMN, UML, Flowchart online dạng whiteboard</title>
+
+  <!-- ============================== SEO ============================== -->
+  <meta name="description" content="Công cụ vẽ diagram chuyên dụng cho thiết kế phần mềm dạng whiteboard, chạy ngay trên trình duyệt: BPMN 2.0, UML 2.5 (Use Case, Activity, Class, Sequence, State, Component, Deployment), Flowchart và ERD. Dữ liệu lưu dạng JSON, xuất SVG/PNG và nhúng SVG trực tiếp vào Markdown.">
+  <meta name="keywords" content="diagram editor, vẽ diagram, BPMN, BPMN 2.0, UML, UML 2.5, flowchart, lưu đồ, ERD, sequence diagram, class diagram, use case diagram, activity diagram, state machine, component diagram, deployment diagram, whiteboard, thiết kế phần mềm, ISO/IEC/IEEE 12207, JSON, SVG, Markdown, mermaid alternative">
+  <meta name="application-name" content="Diagram Editor">
+  <meta name="robots" content="index, follow, max-image-preview:large">
+  <meta name="generator" content="Diagram Editor (HTML/CSS/JavaScript thuần)">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#ffffff">
+  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff">
+  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#161b22">
+  <!-- Khi đã có tên miền, bổ sung (URL tuyệt đối):
+  <link rel="canonical" href="https://example.com/">
+  <meta property="og:url" content="https://example.com/">
+  <meta property="og:image" content="https://example.com/og-image.png">
+  <meta name="twitter:image" content="https://example.com/og-image.png">
+  -->
+
+  <!-- Open Graph / mạng xã hội -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Diagram Editor">
+  <meta property="og:locale" content="vi_VN">
+  <meta property="og:title" content="Diagram Editor – Vẽ BPMN, UML, Flowchart online dạng whiteboard">
+  <meta property="og:description" content="Vẽ BPMN 2.0, UML 2.5, Flowchart và ERD trên whiteboard. Dữ liệu JSON, xuất SVG/PNG, nhúng SVG vào Markdown. Mẫu UML theo các quá trình của ISO/IEC/IEEE 12207.">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Diagram Editor – BPMN, UML, Flowchart whiteboard">
+  <meta name="twitter:description" content="Vẽ BPMN 2.0, UML 2.5, Flowchart và ERD ngay trên trình duyệt. JSON, SVG, PNG và nhúng SVG vào Markdown.">
+
+  <!-- AI / LLM: mô tả có cấu trúc cho máy đọc -->
+  <link rel="alternate" type="text/plain" href="llms.txt" title="LLM-friendly description">
+  <link rel="help" href="README.md">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "Diagram Editor",
+    "alternateName": ["Trình vẽ diagram BPMN UML Flowchart", "Whiteboard diagram editor"],
+    "description": "Công cụ vẽ diagram dạng whiteboard dành cho thiết kế phần mềm: BPMN 2.0, UML 2.5, Flowchart và ERD. Đối tượng được quản lý bằng JSON; xuất SVG, PNG; nhúng SVG trực tiếp vào Markdown.",
+    "applicationCategory": "DesignApplication",
+    "applicationSubCategory": "Diagramming / Software modeling",
+    "operatingSystem": "Mọi hệ điều hành có trình duyệt hiện đại (Chrome, Edge, Firefox, Safari)",
+    "browserRequirements": "Requires JavaScript. Requires HTML5 (SVG, Canvas).",
+    "inLanguage": "vi",
+    "isAccessibleForFree": true,
+    "featureList": [
+      "3 chế độ: Flowchart, BPMN 2.0, UML 2.5 (kèm ERD)",
+      "99 ký hiệu chuẩn và 27 kiểu đường nối (sequence flow, message flow, generalization, composition, crow's foot…)",
+      "Mẫu UML theo các quá trình kỹ thuật của ISO/IEC/IEEE 12207",
+      "Whiteboard: zoom, pan, lưới, bắt dính, sticky note, undo/redo, copy/paste",
+      "Dữ liệu JSON có kiểm tra hợp lệ; tab sửa JSON trực tiếp",
+      "Xuất JSON, SVG, PNG; nhúng SVG inline hoặc PNG base64 vào Markdown",
+      "Tab trợ giúp giải thích ý nghĩa từng ký hiệu và mũi tên",
+      "Chế độ tối",
+      "Chạy offline, không cần cài đặt, không cần tài khoản"
+    ],
+    "keywords": "BPMN, UML, flowchart, ERD, diagram, whiteboard, ISO/IEC/IEEE 12207, JSON, SVG, Markdown",
+    "softwareRequirements": "Trình duyệt web hiện đại",
+    "fileFormat": ["application/json", "image/svg+xml", "image/png"]
+  }
+  </script>
+
+  <!-- Favicon (SVG nội tuyến, không cần file ngoài) -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232563eb'/%3E%3Crect x='6' y='7' width='9' height='7' rx='1.5' fill='%23fff'/%3E%3Cpath d='M23.5 6.5l4 4-4 4-4-4z' fill='%23fff'/%3E%3Ccircle cx='10.5' cy='23.5' r='3.5' fill='%23fff'/%3E%3Cpath d='M15 10.5h4.5M10.5 14v6M19.5 13.5l-6 7.5' stroke='%23fff' stroke-width='1.6' fill='none'/%3E%3C/svg%3E">
+
+  <!-- Áp dụng theme sớm để không bị nháy trắng khi tải -->
+  <script>
+    (function () {
+      var t = null;
+      try { t = localStorage.getItem('diagram-editor:theme'); } catch (e) {}
+      if (t !== 'dark' && t !== 'light') t = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      document.documentElement.setAttribute('data-theme', t);
+    })();
+  </script>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <noscript>
+    <main class="noscript">
+      <h1>Diagram Editor – vẽ BPMN, UML, Flowchart dạng whiteboard</h1>
+      <p>Ứng dụng cần JavaScript để chạy. Hãy bật JavaScript trong trình duyệt.</p>
+      <p>Diagram Editor là công cụ vẽ diagram chuyên dụng cho thiết kế phần mềm, chạy hoàn toàn trên trình duyệt, không cần cài đặt hay tài khoản:</p>
+      <ul>
+        <li><strong>Flowchart</strong> theo ISO 5807: terminator, process, decision, data, document, database…</li>
+        <li><strong>BPMN 2.0</strong>: event, task, gateway (XOR, AND, OR), pool, lane, sequence flow, message flow.</li>
+        <li><strong>UML 2.5</strong>: use case, activity, state machine, class, package, component, deployment, sequence, communication; kèm <strong>ERD</strong>.</li>
+        <li>Mẫu UML theo các quá trình kỹ thuật của ISO/IEC/IEEE 12207.</li>
+        <li>Dữ liệu dạng JSON; xuất JSON, SVG, PNG; nhúng SVG trực tiếp vào Markdown.</li>
+      </ul>
+    </main>
+  </noscript>
+  <div id="app">
+    <!-- ============================== TOOLBAR ============================== -->
+    <header id="toolbar">
+      <div class="brand"><span class="logo">◆</span> Diagram<b>Editor</b></div>
+
+      <div id="mode-switch" class="mode-switch" role="tablist" title="Chế độ: mỗi chế độ chỉ hiển thị các ký hiệu của loại diagram đó">
+        <button data-mode="flowchart">Flowchart</button>
+        <button data-mode="bpmn">BPMN</button>
+        <button data-mode="uml">UML</button>
+      </div>
+
+      <div class="tb-group">
+        <button data-action="new" data-icon="new" title="Tài liệu mới"></button>
+        <button data-action="open" data-icon="open" title="Mở file diagram .json (Ctrl+O)"></button>
+        <select id="template-select" title="Mở diagram mẫu"></select>
+      </div>
+
+      <div class="tb-group">
+        <button data-action="undo" data-icon="undo" title="Hoàn tác (Ctrl+Z)"></button>
+        <button data-action="redo" data-icon="redo" title="Làm lại (Ctrl+Y)"></button>
+      </div>
+
+      <div class="tb-group">
+        <button data-tool="select" data-icon="pointer" title="Chọn / di chuyển (V)"></button>
+        <button data-tool="hand" data-icon="hand" title="Kéo canvas (H, hoặc giữ Space)"></button>
+        <button data-tool="connect" data-icon="connect" title="Vẽ đường nối: kéo từ hình này sang hình khác (C)"></button>
+        <select id="connector-select" title="Kiểu đường nối mặc định cho đường mới"></select>
+      </div>
+
+      <div class="tb-group">
+        <button data-action="duplicate" data-icon="duplicate" title="Nhân bản (Ctrl+D)"></button>
+        <button data-action="delete" data-icon="trash" title="Xoá (Delete)"></button>
+        <button data-action="front" data-icon="front" title="Đưa lên trên cùng (Ctrl+])"></button>
+        <button data-action="back" data-icon="back" title="Đưa xuống dưới cùng (Ctrl+[)"></button>
+      </div>
+
+      <div class="tb-group">
+        <button data-action="zoom-out" data-icon="zoomOut" title="Thu nhỏ (Ctrl −)"></button>
+        <button data-action="zoom-reset" id="zoom-label" class="zoom-label" title="Về 100% (Ctrl+0)">100%</button>
+        <button data-action="zoom-in" data-icon="zoomIn" title="Phóng to (Ctrl +)"></button>
+        <button data-action="fit" data-icon="fit" title="Vừa màn hình (Shift+1)"></button>
+        <button data-toggle="grid" data-icon="grid" title="Hiện / ẩn lưới"></button>
+        <button data-toggle="snap" data-icon="magnet" title="Bắt dính theo lưới"></button>
+        <button data-action="theme" id="theme-btn" title="Chế độ sáng / tối" aria-label="Chuyển chế độ sáng / tối"></button>
+      </div>
+
+      <div class="tb-spacer"></div>
+
+      <div class="tb-group download-group">
+        <span class="tb-label">Tải xuống</span>
+        <button data-action="save" class="text-btn dl-json" title="Tải file JSON – định dạng gốc, mở lại để sửa tiếp (Ctrl+S)"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>JSON</button>
+        <button data-action="export-svg" class="text-btn dl-svg" title="Tải ảnh vector SVG"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>SVG</button>
+        <button data-action="export-png" class="text-btn dl-png" title="Tải ảnh PNG"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>PNG</button>
+      </div>
+
+      <div class="tb-group last">
+        <button data-action="embed" class="text-btn embed-btn" title="Tạo mã SVG để dán thẳng vào file Markdown (.md) – không cần file ảnh bên ngoài"><span class="ico">&lt;/&gt;&nbsp;</span>Nhúng SVG</button>
+      </div>
+    </header>
+
+    <!-- ============================== PALETTE ============================== -->
+    <aside id="palette">
+      <div class="pal-search">
+        <input id="palette-search" type="search" placeholder="Tìm hình… (gateway, class, actor…)" autocomplete="off">
+      </div>
+      <div id="palette-list"></div>
+    </aside>
+
+    <!-- =============================== CANVAS ============================== -->
+    <main id="stage" class="tool-select">
+      <svg id="canvas" xmlns="http://www.w3.org/2000/svg"></svg>
+      <textarea id="text-editor" hidden spellcheck="false" placeholder="Nhập nội dung…  (Ctrl+Enter để lưu, Esc để huỷ)"></textarea>
+      <div id="toast" hidden></div>
+    </main>
+
+    <!-- ============================= INSPECTOR ============================= -->
+    <aside id="inspector">
+      <div class="tabs">
+        <button class="tab active" data-tab="props">Thuộc tính</button>
+        <button class="tab" data-tab="json">JSON</button>
+        <button class="tab" data-tab="help">Trợ giúp</button>
+      </div>
+      <div id="tab-props" class="tab-body">
+        <div id="props"></div>
+      </div>
+      <div id="tab-json" class="tab-body" hidden>
+        <div class="json-actions">
+          <button class="btn primary" data-json="apply" title="Ctrl+Enter">Áp dụng</button>
+          <button class="btn" data-json="reload">Tải lại</button>
+          <button class="btn" data-json="format">Định dạng</button>
+          <button class="btn" data-json="copy">Sao chép</button>
+        </div>
+        <textarea id="json-text" class="code" spellcheck="false"></textarea>
+        <div id="json-msg" class="msg">Toàn bộ diagram được lưu dưới dạng JSON. Sửa trực tiếp rồi bấm "Áp dụng".</div>
+      </div>
+      <div id="tab-help" class="tab-body" hidden>
+        <div id="help"></div>
+      </div>
+    </aside>
+
+    <!-- ============================= STATUS BAR ============================ -->
+    <footer id="statusbar">
+      <span id="st-pos">x: 0  y: 0</span>
+      <span id="st-count"></span>
+      <span id="st-sel"></span>
+      <span class="st-hint">Nhấn đúp: sửa chữ · Space + kéo: di chuyển canvas · Ctrl + cuộn: zoom · Tự lưu vào trình duyệt</span>
+    </footer>
+  </div>
+
+  <input type="file" id="file-input" accept=".json,application/json" hidden>
+
+  <script src="js/util.js"></script>
+  <script src="js/shapes.js"></script>
+  <script src="js/render.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/templates.js"></script>
+  <script src="js/help.js"></script>
+  <script src="js/export.js"></script>
+  <script src="js/editor.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>

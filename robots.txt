@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+
+# Mô tả dành cho các hệ thống AI / LLM: /llms.txt
+# Khi đã có tên miền, thêm: Sitemap: https://example.com/sitemap.xml

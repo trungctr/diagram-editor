@@ -1,0 +1,201 @@
+/* =========================================================================
+ * Nội dung trợ giúp: ý nghĩa node / đường nối theo quy ước của
+ * Flowchart (ISO 5807), BPMN 2.0 (OMG), UML 2.5 (OMG) và ERD.
+ * ========================================================================= */
+(function (DE) {
+  'use strict';
+
+  DE.HELP = {
+    modes: {
+      flowchart: {
+        title: 'Flowchart (lưu đồ)',
+        intro:
+          'Lưu đồ mô tả trình tự các bước xử lý của một thuật toán hoặc quy trình. Ký hiệu theo quy ước ISO 5807 / ANSI. ' +
+          'Mỗi lưu đồ có một điểm Bắt đầu, một hoặc nhiều điểm Kết thúc, và đọc theo chiều mũi tên (thường từ trên xuống, trái sang phải).',
+        rules: [
+          'Mỗi lưu đồ bắt đầu và kết thúc bằng Terminator (hình viên thuốc).',
+          'Decision (hình thoi) có ít nhất 2 nhánh ra; ghi nhãn điều kiện trên mỗi nhánh (Có/Không, Đúng/Sai…).',
+          'Process có đúng một luồng ra; tránh để các đường nối cắt nhau, dùng Connector (tròn) để nối các phần xa nhau.',
+          'Khi lưu đồ sang trang khác, dùng Off-page Connector có cùng ký hiệu ở hai đầu.',
+          'Vòng lặp được thể hiện bằng mũi tên quay ngược về một bước trước đó sau một Decision.',
+        ],
+      },
+      bpmn: {
+        title: 'BPMN 2.0 (Business Process Model and Notation)',
+        intro:
+          'BPMN mô hình hoá quy trình nghiệp vụ theo chuẩn OMG BPMN 2.0 (ISO/IEC 19510). Các phần tử chính: Event (vòng tròn – điều gì xảy ra), ' +
+          'Activity (hình chữ nhật bo góc – công việc được làm), Gateway (hình thoi – rẽ nhánh/hợp nhánh), Pool/Lane (người/bộ phận tham gia), ' +
+          'Data (dữ liệu), và các Flow nối chúng.',
+        rules: [
+          'Mỗi quy trình nên có Start Event và End Event; event bắt đầu viền mảnh, trung gian viền đôi, kết thúc viền đậm.',
+          'Sequence Flow (nét liền) chỉ nối các phần tử trong CÙNG một Pool. Giữa các Pool phải dùng Message Flow (nét đứt).',
+          'Pool là một bên tham gia (tổ chức, hệ thống); Lane chia Pool theo vai trò/bộ phận.',
+          'Gateway không “làm việc”, chỉ điều khiển luồng: XOR chọn 1 nhánh, AND chạy song song tất cả nhánh, OR chọn 1 hoặc nhiều nhánh.',
+          'Nên dùng cặp gateway cùng loại để tách và hợp nhánh. Đặt tên Task theo dạng “Động từ + danh từ” (vd: Kiểm tra tồn kho).',
+          'Data Object/Data Store nối với Activity bằng Data Association (nét chấm có mũi tên).',
+        ],
+      },
+      uml: {
+        title: 'UML 2.5 (Unified Modeling Language)',
+        intro:
+          'UML (OMG UML 2.5.1, ISO/IEC 19505) có 14 loại diagram, chia làm 2 nhóm: Cấu trúc (Class, Object, Package, Component, Composite Structure, ' +
+          'Deployment, Profile) và Hành vi (Use Case, Activity, State Machine, và nhóm Tương tác: Sequence, Communication, Timing, Interaction Overview). ' +
+          'Chế độ này còn kèm ERD để thiết kế dữ liệu.',
+        rules: [
+          'Class gồm 3 ngăn: tên – thuộc tính – thao tác. Ký hiệu phạm vi: + public, - private, # protected, ~ package.',
+          'Kế thừa (Generalization): mũi tên tam giác rỗng chỉ về lớp CHA. Hiện thực interface (Realization): nét đứt + tam giác rỗng chỉ về interface.',
+          'Composition (thoi đặc) và Aggregation (thoi rỗng): hình thoi nằm ở phía TỔNG THỂ (whole).',
+          'Dependency (nét đứt, mũi tên mở): phần tử nguồn phụ thuộc/sử dụng phần tử đích.',
+          'Sequence: message đồng bộ = mũi tên đặc, bất đồng bộ = mũi tên mở, message trả về = nét đứt.',
+          'State / Activity: nhãn transition dạng “sựKiện [điều kiện guard] / hànhĐộng”.',
+        ],
+      },
+    },
+
+    shapes: {
+      // ---------- chung
+      'basic.sticky': 'Giấy ghi chú kiểu whiteboard để ghi ý tưởng, câu hỏi, việc cần làm. Không mang ngữ nghĩa trong mô hình.',
+      'basic.text': 'Văn bản tự do dùng để chú thích. Có thể tạo nhanh bằng cách nhấn đúp vào vùng trống.',
+      'basic.heading': 'Tiêu đề lớn cho diagram hoặc một vùng của diagram.',
+      'basic.frame': 'Khung gom nhóm trực quan một vùng của bảng vẽ; kéo khung sẽ kéo theo các hình bên trong.',
+      'basic.cloud': 'Đám mây: biểu diễn Internet, mạng bên ngoài hoặc hệ thống/dịch vụ bên thứ ba.',
+      'basic.rect': 'Hình chữ nhật cơ bản, không mang ngữ nghĩa chuẩn.',
+      'basic.roundrect': 'Hình chữ nhật bo góc cơ bản, không mang ngữ nghĩa chuẩn.',
+      'basic.ellipse': 'Ellipse cơ bản, không mang ngữ nghĩa chuẩn.',
+      'basic.triangle': 'Tam giác cơ bản, thường dùng làm ký hiệu cảnh báo / phân cấp.',
+      // ---------- flowchart
+      'flow.terminator': 'Điểm Bắt đầu hoặc Kết thúc của lưu đồ.',
+      'flow.process': 'Một bước xử lý / tính toán / hành động (vd: “Tính tổng tiền”). Có một luồng vào và một luồng ra.',
+      'flow.decision': 'Điểm rẽ nhánh theo điều kiện (câu hỏi Có/Không). Mỗi nhánh ra cần ghi nhãn điều kiện.',
+      'flow.data': 'Nhập (Input) hoặc xuất (Output) dữ liệu: đọc từ người dùng, in kết quả, nhận/gửi dữ liệu.',
+      'flow.predefined': 'Gọi một quy trình con / hàm đã được định nghĩa ở nơi khác (subroutine).',
+      'flow.document': 'Một tài liệu được tạo ra hoặc sử dụng (báo cáo, hoá đơn, file in…).',
+      'flow.multiDocument': 'Nhiều tài liệu cùng lúc.',
+      'flow.manualInput': 'Dữ liệu nhập thủ công bởi người (bàn phím, form).',
+      'flow.manualOperation': 'Thao tác do con người thực hiện thủ công, không tự động hoá.',
+      'flow.preparation': 'Bước chuẩn bị / khởi tạo (vd: khởi tạo biến đếm của vòng lặp).',
+      'flow.database': 'Lưu trữ dữ liệu: cơ sở dữ liệu, bảng dữ liệu.',
+      'flow.delay': 'Chờ / trì hoãn một khoảng thời gian hoặc chờ một sự kiện.',
+      'flow.display': 'Hiển thị thông tin lên màn hình.',
+      'flow.connector': 'Điểm nối trong cùng trang, dùng để tránh đường nối dài/cắt nhau; hai đầu cùng ký hiệu (A, B…).',
+      'flow.offPage': 'Điểm nối sang trang khác của lưu đồ; hai đầu cùng số hiệu.',
+      'flow.comment': 'Chú thích / giải thích cho một bước, nối bằng đường thẳng (không mũi tên).',
+      // ---------- bpmn
+      'bpmn.startEvent': 'Start Event: điểm bắt đầu của quy trình (viền mảnh). Không có Sequence Flow đi vào.',
+      'bpmn.startMessage': 'Message Start Event: quy trình bắt đầu khi nhận được một message (vd: nhận đơn hàng từ khách).',
+      'bpmn.startTimer': 'Timer Start Event: quy trình bắt đầu theo thời gian/lịch (vd: 8h sáng mỗi ngày).',
+      'bpmn.intermediateEvent': 'Intermediate Event: sự kiện xảy ra giữa quy trình (viền đôi), ví dụ một mốc trạng thái.',
+      'bpmn.intermediateMessage': 'Message Catch Event (phong bì rỗng): quy trình dừng chờ cho đến khi nhận được message.',
+      'bpmn.intermediateThrowMessage': 'Message Throw Event (phong bì đặc): quy trình gửi đi một message rồi tiếp tục.',
+      'bpmn.intermediateTimer': 'Timer Intermediate Event: chờ một khoảng thời gian hoặc đến một thời điểm (vd: chờ 2 ngày).',
+      'bpmn.endEvent': 'End Event: điểm kết thúc của một nhánh quy trình (viền đậm). Không có Sequence Flow đi ra.',
+      'bpmn.endMessage': 'Message End Event: kết thúc và gửi một message cho bên tham gia khác.',
+      'bpmn.endError': 'Error End Event: kết thúc với lỗi nghiệp vụ; lỗi có thể được bắt bởi sự kiện biên của quy trình cha.',
+      'bpmn.endTerminate': 'Terminate End Event: kết thúc NGAY toàn bộ quy trình, huỷ mọi nhánh còn đang chạy.',
+      'bpmn.task': 'Task: một đơn vị công việc nguyên tử, không chia nhỏ hơn trong mô hình.',
+      'bpmn.userTask': 'User Task: công việc do người thực hiện với sự hỗ trợ của phần mềm (form, màn hình duyệt…).',
+      'bpmn.serviceTask': 'Service Task: công việc do hệ thống/dịch vụ tự động thực hiện (gọi API, web service).',
+      'bpmn.scriptTask': 'Script Task: công việc do engine quy trình tự chạy một đoạn script.',
+      'bpmn.businessRuleTask': 'Business Rule Task: đánh giá một tập luật nghiệp vụ (bảng quyết định, rule engine).',
+      'bpmn.manualTask': 'Manual Task: công việc thủ công không có hỗ trợ của phần mềm (vd: đóng gói hàng).',
+      'bpmn.sendTask': 'Send Task: công việc gửi một message cho bên tham gia khác.',
+      'bpmn.receiveTask': 'Receive Task: công việc chờ nhận một message từ bên ngoài.',
+      'bpmn.subProcess': 'Sub-Process thu gọn (dấu +): một hoạt động phức hợp, chi tiết bên trong được mô tả riêng.',
+      'bpmn.expandedSubProcess': 'Sub-Process mở rộng: hiển thị luôn quy trình con bên trong khung.',
+      'bpmn.callActivity': 'Call Activity (viền đậm): gọi một quy trình toàn cục có thể tái sử dụng.',
+      'bpmn.exclusiveGateway': 'Exclusive Gateway (XOR, dấu X): chọn ĐÚNG MỘT nhánh dựa trên điều kiện; khi hợp nhánh thì đi tiếp khi có 1 nhánh tới.',
+      'bpmn.parallelGateway': 'Parallel Gateway (AND, dấu +): tách thành TẤT CẢ các nhánh song song; khi hợp nhánh thì chờ đủ mọi nhánh.',
+      'bpmn.inclusiveGateway': 'Inclusive Gateway (OR, vòng tròn): chọn MỘT HOẶC NHIỀU nhánh có điều kiện đúng.',
+      'bpmn.eventGateway': 'Event-based Gateway: rẽ nhánh theo sự kiện nào xảy ra trước (message tới hay hết thời gian).',
+      'bpmn.complexGateway': 'Complex Gateway: điều kiện tách/hợp phức tạp không diễn đạt được bằng các gateway khác.',
+      'bpmn.dataObject': 'Data Object: dữ liệu/tài liệu được tạo ra hoặc dùng trong quy trình (vd: Hoá đơn).',
+      'bpmn.dataStore': 'Data Store: nơi lưu trữ dữ liệu bền vững tồn tại ngoài vòng đời quy trình (CSDL).',
+      'bpmn.message': 'Message: nội dung trao đổi giữa hai bên tham gia, thường gắn trên Message Flow.',
+      'bpmn.pool': 'Pool: một bên tham gia quy trình (tổ chức, khách hàng, hệ thống). Các Pool chỉ giao tiếp bằng Message Flow.',
+      'bpmn.lane': 'Lane: phân vùng trong Pool theo vai trò / bộ phận / hệ thống chịu trách nhiệm.',
+      'bpmn.annotation': 'Text Annotation: chú thích thêm, nối với phần tử bằng Association (nét chấm).',
+      'bpmn.group': 'Group: gom nhóm trực quan các phần tử (không ảnh hưởng luồng xử lý).',
+      // ---------- uml – structure
+      'uml.class': 'Class: tên lớp – thuộc tính – thao tác. Thuộc tính viết “phạm vi tên: Kiểu”, thao tác viết “phạm vi tên(tham số): KiểuTrảVề”.',
+      'uml.abstractClass': 'Abstract Class: lớp trừu tượng (tên in nghiêng), không tạo đối tượng trực tiếp, dùng làm lớp cha.',
+      'uml.interface': 'Interface «interface»: tập thao tác mà lớp hiện thực phải cung cấp; nối bằng Realization.',
+      'uml.enum': 'Enumeration «enumeration»: kiểu liệt kê với tập giá trị cố định.',
+      'uml.object': 'Object (Instance): một đối tượng cụ thể, tên gạch chân dạng “tênĐốiTượng : Lớp”, kèm giá trị thuộc tính. Dùng trong Object/Communication diagram.',
+      'uml.package': 'Package: không gian tên gom nhóm các phần tử mô hình (lớp, thành phần…); dùng cho Package diagram / kiến trúc phân lớp.',
+      'uml.component': 'Component: một phần có thể thay thế của hệ thống, đóng gói nội dung và giao tiếp qua interface (service, module, thư viện).',
+      'uml.providedInterface': 'Provided Interface (lollipop ○): interface mà component CUNG CẤP cho bên ngoài.',
+      'uml.requiredInterface': 'Required Interface (socket ◡): interface mà component CẦN dùng từ bên ngoài.',
+      'uml.port': 'Port: điểm tương tác của component/class với môi trường, gắn trên viền component.',
+      'uml.node': 'Node: tài nguyên tính toán trong Deployment diagram: «device» (máy chủ, điện thoại) hoặc «execution environment» (JVM, Docker, OS).',
+      'uml.artifact': 'Artifact: sản phẩm vật lý được triển khai (file .jar, .war, script, schema CSDL…).',
+      'uml.note': 'Note / Comment: ghi chú gắn vào phần tử bất kỳ, nối bằng nét đứt không mũi tên.',
+      // ---------- uml – use case
+      'uml.actor': 'Actor: vai trò bên ngoài hệ thống tương tác với hệ thống (người dùng, hệ thống khác, thiết bị).',
+      'uml.useCase': 'Use Case: một chức năng/mục tiêu có giá trị mà hệ thống cung cấp cho actor. Đặt tên dạng động từ (vd: Đặt hàng).',
+      'uml.systemBoundary': 'System Boundary: ranh giới của hệ thống; use case nằm trong, actor nằm ngoài.',
+      // ---------- uml – activity / state
+      'uml.initial': 'Initial Node / Initial State: điểm bắt đầu của Activity hoặc State Machine.',
+      'uml.final': 'Activity Final / Final State: kết thúc toàn bộ hoạt động hoặc máy trạng thái.',
+      'uml.flowFinal': 'Flow Final (vòng tròn có X): chỉ kết thúc MỘT luồng, các luồng khác vẫn tiếp tục.',
+      'uml.action': 'Action / Activity: một bước hành động trong Activity diagram.',
+      'uml.state': 'State: trạng thái của đối tượng. Ngăn dưới ghi hành vi trong trạng thái: entry / …, do / …, exit / ….',
+      'uml.decision': 'Decision / Merge: rẽ nhánh theo điều kiện guard [điều kiện] hoặc hợp các nhánh thay thế lại.',
+      'uml.forkH': 'Fork / Join: tách một luồng thành các luồng song song (fork) hoặc đồng bộ chờ các luồng song song (join).',
+      'uml.forkV': 'Fork / Join dạng dọc.',
+      'uml.signalSend': 'Send Signal Action: gửi một tín hiệu bất đồng bộ.',
+      'uml.signalReceive': 'Accept Event Action: chờ nhận một sự kiện/tín hiệu.',
+      'uml.timeEvent': 'Time Event (đồng hồ cát): hành động được kích hoạt theo thời gian.',
+      'uml.partition': 'Activity Partition (swimlane): chia Activity diagram theo người/bộ phận/hệ thống chịu trách nhiệm.',
+      'uml.objectNode': 'Object Node: đối tượng/dữ liệu chảy qua Activity, có thể ghi trạng thái trong [ ].',
+      'uml.history': 'History Pseudostate (H): khi quay lại trạng thái tổng hợp, khôi phục trạng thái con gần nhất.',
+      // ---------- uml – sequence
+      'uml.lifeline': 'Lifeline: một đối tượng tham gia tương tác, dạng “tên : Lớp” hoặc “:Lớp”; đường đứt thể hiện thời gian đi xuống.',
+      'uml.actorLifeline': 'Actor Lifeline: actor tham gia Sequence diagram.',
+      'uml.activation': 'Activation (Execution Specification): khoảng thời gian đối tượng đang thực thi một thao tác.',
+      'uml.fragment': 'Combined Fragment: khối điều khiển trong tương tác – alt (rẽ nhánh), opt (tuỳ chọn), loop (lặp), par (song song), ref (tham chiếu)… Ghi guard trong [ ].',
+      // ---------- erd
+      'erd.table': 'Table: bảng CSDL quan hệ. Ngăn trên là tên bảng, ngăn dưới là các cột; PK = khoá chính, FK = khoá ngoại.',
+      'erd.entity': 'Entity (ký pháp Chen): một tập thực thể trong mô hình khái niệm.',
+      'erd.weakEntity': 'Weak Entity (viền đôi): thực thể phụ thuộc, không có khoá riêng, định danh qua thực thể chủ.',
+      'erd.relationship': 'Relationship (hình thoi): mối quan hệ giữa các thực thể (Chen).',
+      'erd.attribute': 'Attribute (ellipse): thuộc tính của thực thể (Chen).',
+      'erd.keyAttribute': 'Key Attribute (gạch chân): thuộc tính khoá định danh thực thể.',
+    },
+
+    connectors: {
+      'flow.arrow': 'Luồng điều khiển: chỉ thứ tự thực hiện từ bước này sang bước kế tiếp.',
+      'flow.line': 'Đường nối không chiều, dùng cho chú thích hoặc liên kết trực quan.',
+      'flow.curve': 'Luồng điều khiển dạng cong (chỉ khác về trình bày).',
+      'bpmn.sequenceFlow': 'Sequence Flow (nét liền, mũi tên đặc): thứ tự thực hiện giữa các Activity/Event/Gateway TRONG CÙNG một Pool.',
+      'bpmn.defaultFlow': 'Default Flow (gạch chéo ở gốc): nhánh mặc định của Gateway khi không điều kiện nào đúng.',
+      'bpmn.messageFlow': 'Message Flow (nét đứt, gốc tròn rỗng, đầu tam giác rỗng): trao đổi message GIỮA HAI Pool khác nhau.',
+      'bpmn.association': 'Association (nét chấm): gắn Text Annotation hoặc artefact vào phần tử.',
+      'bpmn.dataAssociation': 'Data Association (nét chấm, mũi tên mở): luồng dữ liệu giữa Activity và Data Object/Data Store.',
+      'uml.association': 'Association: quan hệ cấu trúc giữa hai lớp (đối tượng của lớp này liên kết với lớp kia); ghi bội số 1, 0..1, 0..*, 1..*. Cũng dùng nối Actor – Use Case.',
+      'uml.directedAssociation': 'Directed Association: quan hệ liên kết có chiều điều hướng (lớp nguồn biết về lớp đích).',
+      'uml.generalization': 'Generalization (kế thừa, tam giác rỗng): lớp con → lớp cha. Đọc là “là một” (is-a).',
+      'uml.realization': 'Realization (nét đứt + tam giác rỗng): lớp hiện thực → interface.',
+      'uml.dependency': 'Dependency (nét đứt, mũi tên mở): phần tử nguồn phụ thuộc/sử dụng phần tử đích; thay đổi ở đích có thể ảnh hưởng nguồn.',
+      'uml.import': 'Package Import «import»: package nguồn nhập các phần tử public của package đích.',
+      'uml.deploy': 'Deploy «deploy»: artifact được triển khai lên node.',
+      'uml.manifest': 'Manifest «manifest»: artifact hiện thực vật lý của một component.',
+      'uml.aggregation': 'Aggregation (thoi rỗng ở phía tổng thể): quan hệ “có” (has-a) lỏng; thành phần có thể tồn tại độc lập.',
+      'uml.composition': 'Composition (thoi đặc ở phía tổng thể): quan hệ sở hữu chặt; thành phần bị huỷ cùng tổng thể.',
+      'uml.include': '«include»: use case gốc LUÔN gọi use case được include (hành vi bắt buộc dùng chung). Mũi tên chỉ về use case được include.',
+      'uml.extend': '«extend»: use case mở rộng bổ sung hành vi TUỲ CHỌN cho use case gốc khi có điều kiện. Mũi tên chỉ về use case gốc.',
+      'uml.transition': 'Transition / Control Flow: chuyển trạng thái (State) hoặc luồng điều khiển (Activity). Nhãn dạng “sựKiện [guard] / hànhĐộng”.',
+      'uml.syncMessage': 'Synchronous Message (mũi tên đặc): bên gửi chờ đến khi nhận kết quả.',
+      'uml.asyncMessage': 'Asynchronous Message (mũi tên mở): bên gửi không chờ, tiếp tục xử lý.',
+      'uml.returnMessage': 'Return Message (nét đứt): giá trị trả về cho message đồng bộ trước đó.',
+      'erd.oneToOne': 'Quan hệ 1 – 1 (crow\'s foot): mỗi bản ghi bên này ứng với đúng một bản ghi bên kia.',
+      'erd.oneToMany': 'Quan hệ 1 – N (crow\'s foot): một bản ghi phía “||” ứng với một hoặc nhiều bản ghi phía chân chim.',
+      'erd.zeroToMany': 'Quan hệ 1 – 0..N: một bản ghi ứng với không hoặc nhiều bản ghi phía chân chim.',
+    },
+
+    arrows: {
+      arrow: 'Mũi tên đặc', open: 'Mũi tên mở', triangle: 'Tam giác rỗng (kế thừa / hiện thực)', diamond: 'Thoi rỗng (aggregation)',
+      diamondFilled: 'Thoi đặc (composition)', circle: 'Tròn rỗng (gốc message flow)', slash: 'Gạch chéo (default flow)',
+      erOnlyOne: '|| một và chỉ một', erOneMany: '|< một hoặc nhiều', erZeroMany: 'o< không hoặc nhiều', erZeroOne: 'o| không hoặc một',
+    },
+  };
+})(window.DE);
