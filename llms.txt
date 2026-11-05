@@ -35,5 +35,6 @@
 
 ## Tài liệu
 
-- [README](README.md): hướng dẫn đầy đủ, danh sách `type`, phím tắt, cấu trúc mã nguồn.
-- [Ứng dụng](index.html)
+- [Ứng dụng](https://diagrams.trungctr.com/): mở và dùng ngay trên trình duyệt.
+- [README](https://github.com/trungctr/diagram-editor/blob/main/README.md): hướng dẫn đầy đủ, danh sách `type`, phím tắt, cấu trúc mã nguồn.
+- [Mã nguồn](https://github.com/trungctr/diagram-editor)

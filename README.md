@@ -43,9 +43,9 @@ Hoặc chạy qua web server tĩnh bất kỳ, ví dụ: `npx serve .` hay `pyth
 - **Chế độ tối** (nút mặt trăng / mặt trời): chỉ làm tối giao diện; nền whiteboard không đen mà chỉ giảm độ
   trắng cho đỡ chói, các hình giữ nguyên màu, file xuất ra vẫn nền trắng. Mặc định theo hệ điều hành, lựa chọn
   được ghi nhớ.
-- **SEO / AI SEO**: meta description, Open Graph, Twitter Card, JSON-LD (`WebApplication`), `<noscript>` mô tả,
-  `robots.txt`, `llms.txt` (mô tả ứng dụng và định dạng JSON cho các hệ thống AI). Khi có tên miền, bổ sung
-  `canonical`, `og:url`, `og:image` (đã để sẵn chỗ trong `index.html`) và `Sitemap` trong `robots.txt`.
+- **SEO / AI SEO**: meta description, Open Graph, Twitter Card (ảnh `og-image.png` 1200×630), JSON-LD
+  (`WebApplication`), `canonical`, `<noscript>` mô tả, `robots.txt`, `sitemap.xml`, `llms.txt` (mô tả ứng
+  dụng và định dạng JSON cho các hệ thống AI). Trang chính thức: https://diagrams.trungctr.com/
 - **Xác nhận trước khi thay diagram**: Tài liệu mới, chuyển mode (xoá diagram hiện tại và bắt đầu tài liệu
   mới của mode đó) và mở mẫu đều hỏi lại, có nút “Tải JSON rồi tiếp tục”. Không hỏi khi diagram đang trống.
   Vẫn hoàn tác được bằng `Ctrl+Z`.

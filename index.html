@@ -15,12 +15,14 @@
   <meta name="theme-color" content="#ffffff">
   <meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff">
   <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#161b22">
-  <!-- Khi đã có tên miền, bổ sung (URL tuyệt đối):
-  <link rel="canonical" href="https://example.com/">
-  <meta property="og:url" content="https://example.com/">
-  <meta property="og:image" content="https://example.com/og-image.png">
-  <meta name="twitter:image" content="https://example.com/og-image.png">
-  -->
+  <link rel="canonical" href="https://diagrams.trungctr.com/">
+  <link rel="sitemap" type="application/xml" href="https://diagrams.trungctr.com/sitemap.xml">
+  <meta property="og:url" content="https://diagrams.trungctr.com/">
+  <meta property="og:image" content="https://diagrams.trungctr.com/og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Giao diện Diagram Editor đang vẽ một quy trình BPMN">
+  <meta name="twitter:image" content="https://diagrams.trungctr.com/og-image.png">
 
   <!-- Open Graph / mạng xã hội -->
   <meta property="og:type" content="website">
@@ -33,13 +35,17 @@
   <meta name="twitter:description" content="Vẽ BPMN 2.0, UML 2.5, Flowchart và ERD ngay trên trình duyệt. JSON, SVG, PNG và nhúng SVG vào Markdown.">
 
   <!-- AI / LLM: mô tả có cấu trúc cho máy đọc -->
-  <link rel="alternate" type="text/plain" href="llms.txt" title="LLM-friendly description">
+  <link rel="alternate" type="text/plain" href="https://diagrams.trungctr.com/llms.txt" title="LLM-friendly description">
   <link rel="help" href="README.md">
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@type": "WebApplication",
     "name": "Diagram Editor",
+    "url": "https://diagrams.trungctr.com/",
+    "image": "https://diagrams.trungctr.com/og-image.png",
+    "screenshot": "https://diagrams.trungctr.com/og-image.png",
+    "codeRepository": "https://github.com/trungctr/diagram-editor",
     "alternateName": ["Trình vẽ diagram BPMN UML Flowchart", "Whiteboard diagram editor"],
     "description": "Công cụ vẽ diagram dạng whiteboard dành cho thiết kế phần mềm: BPMN 2.0, UML 2.5, Flowchart và ERD. Đối tượng được quản lý bằng JSON; xuất SVG, PNG; nhúng SVG trực tiếp vào Markdown.",
     "applicationCategory": "DesignApplication",
