@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Maskable: nền phủ kín, nội dung nằm trong vùng an toàn (bán kính 40%) -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#3b82f6"/>
+      <stop offset="1" stop-color="#1d4ed8"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" fill="url(#bg)"/>
+  <g transform="translate(256 256) scale(.74) translate(-266 -256)">
+    <g fill="none" stroke="#ffffff" stroke-width="16" stroke-linecap="round" opacity=".92">
+      <path d="M232 160H282M160 208V296M372 232V302M218 372H282"/>
+    </g>
+    <g fill="#ffffff">
+      <polygon points="300,160 278,147 278,173"/>
+      <polygon points="160,314 147,292 173,292"/>
+      <polygon points="372,320 359,298 385,298"/>
+      <polygon points="300,372 278,359 278,385"/>
+      <rect x="88" y="112" width="144" height="96" rx="20"/>
+      <polygon points="372,88 444,160 372,232 300,160"/>
+      <circle cx="160" cy="372" r="58"/>
+      <rect x="300" y="320" width="144" height="104" rx="52"/>
+    </g>
+  </g>
+</svg>

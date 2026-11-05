@@ -422,6 +422,19 @@ textarea.code {
   overflow: hidden;
   font-variant-numeric: tabular-nums;
 }
+.st-install {
+  height: 20px;
+  padding: 0 10px;
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: #fff;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.st-install:hover { filter: brightness(1.1); }
+@media (display-mode: standalone) { .st-install { display: none !important; } }
 #statusbar .st-hint { margin-left: auto; overflow: hidden; text-overflow: ellipsis; }
 
 /* -------------------------------------------------------------- dialog */

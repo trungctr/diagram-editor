@@ -452,10 +452,16 @@
     });
 
     // file
-    $('#file-input').addEventListener('change', async (ev) => {
+    $('#file-input').addEventListener('change', (ev) => {
       const file = ev.target.files[0];
       ev.target.value = '';
-      if (!file) return;
+      if (file) UI.openDiagramFile(file);
+    });
+  }
+
+  /** Mở một File diagram (.json) – dùng cho nút Mở và khi mở file từ hệ điều hành (PWA) */
+  UI.openDiagramFile = async function (file) {
+    {
       const fail = (title, errors) => {
         const MAX = 8;
         const list = errors.slice(0, MAX).map((e) => '• ' + e).join('\n') + (errors.length > MAX ? `\n… và ${errors.length - MAX} lỗi khác` : '');
@@ -477,8 +483,8 @@
       E.setSelection([]);
       E.fit();
       UI.toast(`Đã mở "${file.name}"`, 'ok');
-    });
-  }
+    }
+  };
 
   function fileBase() {
     return (store.doc.meta?.name || 'diagram').replace(/[\\/:*?"<>|]+/g, '_').trim() || 'diagram';
