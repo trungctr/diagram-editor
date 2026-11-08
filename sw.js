@@ -4,7 +4,7 @@
  * mới nhất (HTML, JS, CSS luôn cùng phiên bản), mất mạng thì dùng bản đã cache.
  * Khi phát hành phiên bản mới có đổi danh sách file, tăng VERSION.
  * ========================================================================= */
-const VERSION = 'v3';
+const VERSION = 'v4';
 const CACHE = `diagram-editor-${VERSION}`;
 const PRECACHE = [
   './',
@@ -19,6 +19,7 @@ const PRECACHE = [
   'js/help.js',
   'js/skill.js',
   'js/ai.js',
+  'js/voice.js',
   'js/export.js',
   'js/editor.js',
   'js/ui.js',
@@ -58,7 +59,8 @@ self.addEventListener('fetch', (event) => {
 
   const isNav = req.mode === 'navigate';
   event.respondWith(
-    fetch(req)
+    // không lấy bản cũ trong cache HTTP: luôn hỏi lại server (ETag → 304 rất nhẹ) để HTML / JS / CSS cùng phiên bản
+    fetch(isNav ? req : new Request(req, { cache: 'no-cache' }))
       .then((res) => {
         if (res.ok && res.type === 'basic') {
           const copy = res.clone();

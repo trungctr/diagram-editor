@@ -9,6 +9,8 @@
 - Mẫu UML nhóm theo các quá trình kỹ thuật của ISO/IEC/IEEE 12207: phân tích nghiệp vụ (Activity), yêu cầu bên liên quan (Use Case), yêu cầu phần mềm (Domain model), kiến trúc (Package, Component), thiết kế (Class, Sequence, Communication, State Machine, ERD), tích hợp & chuyển giao (Deployment), kiểm định (Activity kiểm thử CI), bảo trì (State Machine yêu cầu thay đổi).
 - Whiteboard: canvas vô hạn, zoom/pan, lưới, bắt dính, sticky note, undo/redo, copy/paste, căn chỉnh, chế độ tối.
 - Tab Trợ giúp giải thích ý nghĩa từng ký hiệu và mũi tên theo quy ước.
+- Chat AI (Gemini, OpenAI, Claude bằng API key của người dùng): mô tả bằng lời, AI trả JSON và app áp dụng ngay.
+- Giọng nói: nói thay vì gõ (Web Speech API hoặc Moonshine chạy offline trong trình duyệt), lệnh giọng nói như “hoàn tác”, “vừa màn hình”, app phản hồi bằng giọng nói.
 - Nhúng vào Markdown: SVG inline (`<div><svg>…</svg></div>`, một dòng) hoặc ảnh PNG base64 (`![…](data:image/png;base64,…)`).
 
 ## Định dạng dữ liệu (JSON)

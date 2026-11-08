@@ -2,7 +2,7 @@
 
 Trình vẽ diagram dạng whiteboard chạy hoàn toàn trên trình duyệt: **Flowchart, BPMN 2.0, UML 2.5 và ERD**.
 HTML + CSS + JavaScript thuần, không cần build, không phụ thuộc thư viện ngoài. Mọi đối tượng được quản lý
-bằng **JSON**, và có **Chat AI** để mô tả bằng lời rồi để AI vẽ giúp.
+bằng **JSON**, và có **Chat AI** – gõ hoặc **nói** – để mô tả bằng lời rồi để AI vẽ giúp.
 
 **Dùng ngay:** <https://diagrams.trungctr.com/> (cài được như ứng dụng, chạy cả khi offline).
 
@@ -11,6 +11,7 @@ bằng **JSON**, và có **Chat AI** để mô tả bằng lời rồi để AI 
 - [Chạy trên máy](#chạy-trên-máy)
 - [Tính năng](#tính-năng)
 - [Chat AI](#chat-ai)
+- [Giọng nói](#giọng-nói)
 - [Phím tắt](#phím-tắt)
 - [Cấu trúc JSON](#cấu-trúc-json)
 - [Cấu trúc mã nguồn](#cấu-trúc-mã-nguồn)
@@ -83,7 +84,7 @@ JSON và app **áp dụng ngay**.
 ```text
 [ Claude ● ] [ Copy context ] [ mô hình ▾ ] [ Effort: … ▾ ] [ 💡 Thinking: bật ]      Lượt 2  ↻  —
 ┌──────────────────────────────────────────────────────────────────────────────────────────┐
-│ Hỏi AI về diagram này…                                                🎤  [ Gửi Ctrl ↵ ] │
+│ Hỏi AI về diagram này…                                            🎤  🎧  [ Gửi Ctrl ↵ ] │
 └──────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -142,6 +143,53 @@ danh sách type kèm kích thước và ý nghĩa, quy tắc hợp lệ, quy t�
 chế độ hiện tại hoặc cả 3, kèm diagram hiện tại để AI sửa tiếp. Sao chép hoặc tải `.md`. Dán skill + yêu cầu
 vào AI, rồi dán câu trả lời vào tab JSON → **Áp dụng**. Nội dung sinh từ thư viện hình nên luôn khớp phiên bản app.
 
+## Giọng nói
+
+Bấm 🎤 trong khung chat hoặc nhấn **`Ctrl+M`** rồi nói – **nói xong app tự gửi**, không cần bấm thêm. Muốn sửa
+câu chữ trước khi gửi thì cứ gõ phím như bình thường.
+
+```text
+ 🎤 / Ctrl+M ──► Đang nghe (chữ hiện dần trong ô chat) ──► im lặng 1,2 giây
+                                                              │
+         ┌────────────────────────────────────────────────────┴───────────────┐
+   câu khớp một LỆNH NGẮN                                         câu còn lại = PROMPT
+   (“hoàn tác”, “vừa màn hình”…)                                           │
+         │                                                 🔊 “Em nghe rồi, anh chờ em tí nhé.”
+   chạy ngay, không gọi AI                                  gửi AI → áp dụng JSON
+   🔊 “Đã hoàn tác.”                                        🔊 “Xong rồi, anh xem thử nhé.”
+```
+
+- **Phản hồi bằng giọng nói ngay khi gửi**: “Em nghe rồi, anh chờ em tí nhé”, “Rõ rồi, em làm ngay đây”… (đổi
+  câu ngẫu nhiên); xong thì báo “Xong rồi, anh xem thử nhé” (lần đầu nhắc thêm “Không ưng thì nói hoàn tác nhé”).
+  AI trả lời bằng chữ ngắn thì đọc luôn câu trả lời. Xưng hô chọn được: em – anh, em – chị, tôi – bạn, mình – bạn.
+- **Lệnh giọng nói**: câu ngắn khớp *nguyên câu* chạy ngay, không gọi AI – hoàn tác, làm lại, vừa màn hình,
+  phóng to / thu nhỏ, chọn tất cả, xoá, nhân bản, bật / tắt lưới, chế độ tối / sáng, tải JSON / PNG / SVG, nhúng
+  SVG, tài liệu mới, chuyển sang Flowchart / BPMN / UML, trợ giúp, cuộc trò chuyện mới, dừng… Bỏ qua từ đệm
+  (“hoàn tác **đi**”, “**giúp em** vừa màn hình **nhé**”). Câu dài hơn (“xoá node đăng nhập”) được gửi cho AI.
+  Danh sách đầy đủ ở tab Trợ giúp và trong Cài đặt giọng nói.
+- **Xác nhận bằng giọng nói**: khi app hỏi lại (tài liệu mới, chuyển chế độ, JSON cần sửa…) thì đọc câu hỏi và
+  nghe “**đồng ý**” / “**huỷ**”.
+- **Rảnh tay** (🎧 hoặc `Ctrl+Shift+M`): nghe → gửi → đọc kết quả → nghe tiếp. Nói “tắt rảnh tay”, nhấn `Esc`,
+  hoặc im lặng 90 giây thì tự tắt.
+- `Esc` khi đang nghe: huỷ, trả lại nội dung đang gõ dở trong ô chat.
+
+### Bộ nhận dạng
+
+Chuột phải vào 🎤 (hoặc nút “🎙 Giọng nói…” trong Cài đặt AI) để chọn:
+
+| Bộ nhận dạng | Tải về | Đặc điểm |
+| --- | --- | --- |
+| **Web Speech API** (mặc định khi trình duyệt có) | 0 MB | Chữ hiện ngay trong lúc nói. Chrome / Edge gửi âm thanh tới máy chủ nhận dạng của hãng (cần mạng); Chrome 139+ có gói nhận dạng ngay trên máy thì app tự dùng. Firefox không có. |
+| **Offline – Moonshine** | ~45 MB, một lần | [`moonshine-tiny-vi`](https://huggingface.co/bh4/moonshine-tiny-vi-ONNX) (tiếng Việt) / `moonshine-tiny` (English) + Silero VAD chạy bằng [transformers.js](https://huggingface.co/docs/transformers.js) trong Web Worker (giao diện không bị đơ). Âm thanh không rời máy; chữ hiện sau khi nói xong (~1–2 giây). Tải từ Hugging Face / jsDelivr khi dùng lần đầu, sau đó nằm trong cache của trình duyệt. |
+
+“Tự động” chọn Web Speech nếu có, không thì hỏi tải bộ offline.
+
+### Giọng đọc
+
+Dùng `speechSynthesis` của trình duyệt. Máy chưa có giọng tiếng Việt thì phản hồi hiện thành chữ; cài thêm ở
+Windows → Cài đặt → Thời gian & ngôn ngữ → Giọng nói → Thêm giọng → Tiếng Việt, hoặc mở app bằng Microsoft Edge
+(có sẵn giọng HoaiMy / NamMinh). Chọn giọng và “Nghe thử” trong Cài đặt giọng nói.
+
 ## Phím tắt
 
 | Thao tác | Phím |
@@ -158,6 +206,7 @@ vào AI, rồi dán câu trả lời vào tab JSON → **Áp dụng**. Nội dun
 | Lưu / Mở | `Ctrl+S` / `Ctrl+O` |
 | Thu gọn / mở panel | `Ctrl+B` (thư viện) / `Ctrl+Alt+B` (thuộc tính) |
 | Gửi prompt cho AI | `Ctrl+Enter` trong ô chat |
+| Nói với AI | `Ctrl+M` (nói xong tự gửi) · `Ctrl+Shift+M` rảnh tay · `Esc` huỷ khi đang nghe |
 
 ## Cấu trúc JSON
 
@@ -246,6 +295,7 @@ js/templates.js        diagram mẫu (UML nhóm theo quá trình ISO/IEC/IEEE 12
 js/help.js             nội dung trợ giúp: ý nghĩa ký hiệu, đường nối, quy ước từng chế độ
 js/skill.js            sinh skill prompt cho AI (từ thư viện hình)
 js/ai.js               cấu hình AI, tải danh sách mô hình, gọi chat (Gemini / OpenAI / Claude)
+js/voice.js            giọng nói: Web Speech / Moonshine offline, lệnh giọng nói, đọc phản hồi, rảnh tay
 js/export.js           xuất SVG / PNG, nhúng Markdown
 js/editor.js           tương tác canvas (chọn, kéo, resize, nối, phím tắt)
 js/ui.js               toolbar, thư viện, bảng thuộc tính, tab JSON, trợ giúp, khung chat AI

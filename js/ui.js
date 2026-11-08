@@ -122,7 +122,8 @@
   const CHAT_ACTIONS = {
     apikey: () => apiKeyDialog(),
     context: () => skillDialog(),
-    mic: () => UI.toast('Nhập bằng giọng nói: tính năng đang được phát triển', 'info'),
+    mic: () => DE.voice && DE.voice.toggle(),
+    handsfree: () => DE.voice && DE.voice.toggleHandsFree(),
     send: (text) => chatSend(text),
     reset: () => chatReset(true),
     closereply: () => showReply(null),
@@ -216,12 +217,16 @@
   /** Tách phần giải thích (bỏ khối ```json) khỏi lời đáp của AI */
   const stripJsonBlock = (text) => text.replace(/```(?:json)?\s*[\s\S]*?```/gi, '').trim();
 
+  /**
+   * Gửi một lượt chat. Trả về kết quả để phần giọng nói đọc phản hồi:
+   * { status: 'applied' | 'text' | 'cancelled' | 'error' | 'aborted' | 'nokey' | 'busy', text?, message? }
+   */
   async function chatSend(text) {
-    if (chat.busy) return;
+    if (chat.busy) return { status: 'busy' };
     if (!DE.ai.active()) {
       UI.toast('Hãy thêm API key và chọn mô hình trước khi chat', 'warn');
       apiKeyDialog();
-      return;
+      return { status: 'nokey' };
     }
     // Skill của CẢ 3 chế độ, đặt MỘT lần cho cả cuộc trò chuyện: người dùng hỏi loại diagram nào
     // AI cũng biết ký hiệu, và khi diagram AI vẽ làm app đổi chế độ thì hội thoại vẫn tiếp tục.
@@ -248,12 +253,12 @@
       setBusy(false);
       if (e.name === 'AbortError') {
         showReply('Đã dừng yêu cầu. Nội dung bạn viết vẫn còn trong ô chat.', '', 'Đã dừng');
-        return;
+        return { status: 'aborted' };
       }
       const msg = e instanceof TypeError ? 'Không kết nối được tới nhà cung cấp (kiểm tra mạng).' : e.message;
       showReply(msg, 'err', 'Lỗi');
       UI.toast('Gửi không thành công: ' + msg, 'error');
-      return;
+      return { status: 'error', message: msg };
     }
     setBusy(false);
     // ghi chú khi cấu hình effort / thinking không được mô hình áp dụng
@@ -274,7 +279,7 @@
       chat.history.push({ role: 'user', content: text }, { role: 'assistant', content: res.text || '(trống)' });
       updateTurns();
       showReply((res.text || 'AI không trả về nội dung.') + (res.truncated ? '\n\n⚠ Câu trả lời bị cắt do quá dài.' : '') + notes, res.text ? '' : 'err');
-      return;
+      return res.text ? { status: 'text', text: res.text } : { status: 'error', message: 'AI không trả về nội dung' };
     }
     chat.history.push({ role: 'user', content: text }, { role: 'assistant', content: (explain || 'Đã tạo diagram.') + '\n[Đã trả JSON đầy đủ – app đã nhận]' });
     updateTurns();
@@ -287,10 +292,10 @@
     if (r.ok) {
       E.setSelection([]);
       E.fit();
-      const notes = [r.removed.length ? `bỏ ${r.removed.length} phần tử không hợp lệ` : '', r.fixed.length ? `sửa ${r.fixed.length} giá trị` : ''].filter(Boolean).join(', ');
+      const fixNotes = [r.removed.length ? `bỏ ${r.removed.length} phần tử không hợp lệ` : '', r.fixed.length ? `sửa ${r.fixed.length} giá trị` : ''].filter(Boolean).join(', ');
       showReply(
         (explain || 'Đã vẽ xong diagram theo yêu cầu.') +
-          (notes ? `\n\n(App đã tự ${notes}.)` : '') +
+          (fixNotes ? `\n\n(App đã tự ${fixNotes}.)` : '') +
           (res.truncated ? '\n\n⚠ Câu trả lời có thể bị cắt do quá dài.' : '') +
           notes +
           '\n\n↶ Không ưng? Bấm Hoàn tác trên thanh công cụ hoặc Ctrl+Z để quay lại diagram trước.',
@@ -303,11 +308,13 @@
       void undoBtn.offsetWidth; // chạy lại hiệu ứng
       undoBtn.classList.add('pulse');
       setTimeout(() => undoBtn.classList.remove('pulse'), 3200);
+      return { status: 'applied', text: explain };
     } else if (r.cancelled) {
       showReply('Bạn đã huỷ áp dụng. JSON của AI vẫn nằm trong tab JSON để xem hoặc sửa rồi bấm "Áp dụng".', '', 'Chưa áp dụng');
-    } else {
-      showReply('AI trả về JSON nhưng không áp dụng được: ' + r.error + '\nJSON vẫn nằm trong tab JSON để bạn xem / sửa.', 'err', 'Lỗi áp dụng');
+      return { status: 'cancelled' };
     }
+    showReply('AI trả về JSON nhưng không áp dụng được: ' + r.error + '\nJSON vẫn nằm trong tab JSON để bạn xem / sửa.', 'err', 'Lỗi áp dụng');
+    return { status: 'error', message: r.error };
   }
 
   /** Sao chép văn bản vào clipboard (có phương án dự phòng). Trả về true nếu thành công */
@@ -488,7 +495,8 @@
       `<input type="text" id="ai-model-custom" class="ai-model-custom" placeholder="Nhập tên mô hình, vd: claude-opus-5-5" hidden autocomplete="off" spellcheck="false">` +
       `<div id="ai-model-status" class="msg"></div></div>` +
       `<p class="hint ai-privacy">🔒 API key chỉ lưu trong trình duyệt này và chỉ được gửi trực tiếp tới nhà cung cấp đã chọn. Không nên lưu key trên máy dùng chung.</p>` +
-      `<div class="modal-actions"><button class="btn" data-r="cancel">Huỷ</button><button class="btn primary" data-r="apply">Áp dụng</button></div></div>`;
+      `<div class="modal-actions"><button class="btn ai-voice-link" data-r="voice" title="Nhận dạng giọng nói, lệnh giọng nói, giọng đọc phản hồi">🎙 Giọng nói…</button>` +
+      `<button class="btn" data-r="cancel">Huỷ</button><button class="btn primary" data-r="apply">Áp dụng</button></div></div>`;
     const $$b = (q) => back.querySelector(q);
     const provSel = $$b('#ai-provider'), keyBox = $$b('#ai-keybox'), modelSel = $$b('#ai-model');
     const customIn = $$b('#ai-model-custom'), status = $$b('#ai-model-status');
@@ -621,6 +629,10 @@
       if (!b) return;
       const r = b.dataset.r;
       if (r === 'apply') apply();
+      else if (r === 'voice') {
+        close();
+        DE.voice && DE.voice.settingsDialog();
+      }
       else if (r === 'refresh') {
         Object.keys(modelCache).forEach((k) => k.startsWith(prov()) && delete modelCache[k]);
         loadModels();
@@ -706,6 +718,37 @@
     updateApiChip();
   }
 
+  /** Gắn phần giọng nói (js/voice.js) vào app */
+  function initVoice() {
+    if (!DE.voice) return;
+    DE.voice.init({
+      send: (text) => chatSend(text),
+      busy: () => !!chat.busy,
+      hasKey: () => !!DE.ai.active(),
+      abortChat: () => chat.busy && chat.busy.ctrl.abort(),
+      action: (name) => ACTIONS[name] && ACTIONS[name](),
+      requestMode: (m) => requestMode(m),
+      canUndo: () => store.canUndo(),
+      canRedo: () => store.canRedo(),
+      selectionCount: () => E.selectedNodes().length + E.selectedEdges().length,
+      selectAll: () => E.selectAll(),
+      deselect: () => E.setSelection([]),
+      grid: (on) => {
+        E.showGrid = on == null ? !E.showGrid : on;
+        updateToggles();
+        E.invalidate(false);
+      },
+      theme: (t) => UI.setTheme(t),
+      help: () => {
+        if ($('#app').classList.contains('right-collapsed')) UI.togglePanel('right', false);
+        activateTab('help');
+      },
+      chatReset: () => chatReset(false),
+      toast: (m, t) => UI.toast(m, t),
+      confirm: (o) => UI.confirm(o),
+    });
+  }
+
   function initTheme() {
     UI.setTheme(currentTheme(), false);
     // theo hệ điều hành nếu người dùng chưa tự chọn
@@ -755,7 +798,7 @@
         )
         .join('');
       const back = document.createElement('div');
-      back.className = 'modal-backdrop';
+      back.className = 'modal-backdrop confirm-backdrop'; // confirm-backdrop: trả lời được bằng giọng nói
       back.innerHTML =
         `<div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">` +
         `<h3 id="modal-title">${esc(title)}</h3>` +
@@ -924,6 +967,7 @@
     initTheme();
     initPanels();
     initChat();
+    initVoice();
     initToolbar();
     initPalette();
     initInspector();
@@ -1357,6 +1401,15 @@
       .join('');
     h += '</section>';
 
+    // giọng nói
+    if (DE.voice) {
+      h += `<section class="help-sec"><h3>Giọng nói</h3>` +
+        `<p>Bấm micro trong khung chat hoặc <b>Ctrl+M</b> rồi nói – nói xong app tự gửi cho AI và đáp lại bằng giọng nói. <b>Ctrl+Shift+M</b>: rảnh tay (nghe liên tục). Chuột phải vào micro: cài đặt giọng nói.</p>` +
+        `<p>Câu ngắn khớp nguyên câu dưới đây là <b>lệnh</b>, chạy ngay không gọi AI. Khi app hỏi xác nhận, nói “đồng ý” hoặc “huỷ”.</p><table class="keys">` +
+        DE.voice.COMMANDS.map((c) => `<tr data-search="${esc((c.label + ' ' + c.say.join(' ') + ' giọng nói lệnh').toLowerCase())}"><td>${esc(c.label)}</td><td>${c.say.map((x) => '“' + esc(x) + '”').join(', ')}</td></tr>`).join('') +
+        `</table></section>`;
+    }
+
     // phím tắt
     h += `<section class="help-sec"><h3>Thao tác & phím tắt</h3><table class="keys">` +
       [
@@ -1376,6 +1429,7 @@
         ['Dịch chuyển', 'Phím mũi tên (Shift: theo lưới)'],
         ['Vừa màn hình', 'Shift+1'],
         ['Thu gọn / mở panel', 'Nút ‹ › ở mép trái / phải canvas, hoặc Ctrl+B (thư viện) · Ctrl+Alt+B (thuộc tính)'],
+        ['Nói với AI', 'Ctrl+M (nói xong tự gửi) · Ctrl+Shift+M: rảnh tay · Esc: huỷ khi đang nghe'],
       ]
         .map(([a, b]) => `<tr data-search="${esc((a + ' ' + b).toLowerCase())}"><td>${a}</td><td>${b}</td></tr>`)
         .join('') +

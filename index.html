@@ -63,6 +63,8 @@
       "Xuất JSON, SVG, PNG; nhúng SVG inline hoặc PNG base64 vào Markdown",
       "Tab trợ giúp giải thích ý nghĩa từng ký hiệu và mũi tên",
       "Chế độ tối",
+      "Chat AI (Gemini, OpenAI, Claude) vẽ diagram từ mô tả bằng lời",
+      "Nhập bằng giọng nói, lệnh giọng nói, phản hồi bằng giọng nói; nhận dạng offline bằng Moonshine",
       "Chạy offline, không cần cài đặt, không cần tài khoản"
     ],
     "keywords": "BPMN, UML, flowchart, ERD, diagram, whiteboard, ISO/IEC/IEEE 12207, JSON, SVG, Markdown",
@@ -223,10 +225,14 @@
           <span class="ai-busy-text" id="ai-busy-text">Vibing…</span>
           <span class="ai-busy-time" id="ai-busy-time">0s</span>
         </div>
+        <div class="ai-voice" id="ai-voice" hidden aria-live="polite"><span class="ai-voice-dot" aria-hidden="true"></span><span id="ai-voice-text"></span></div>
         <div class="ai-chat-input">
           <textarea id="ai-prompt" rows="1" spellcheck="false" placeholder="Hỏi AI về diagram này…" title="Ví dụ: “Vẽ quy trình đăng nhập bằng BPMN”, “Giải thích diagram này” – Ctrl+Enter để gửi" aria-label="Nội dung gửi cho AI"></textarea>
-          <button type="button" class="ai-icon-btn" data-chat="mic" title="Nhập bằng giọng nói" aria-label="Nhập bằng giọng nói">
+          <button type="button" class="ai-icon-btn ai-mic" id="ai-mic" data-chat="mic" aria-pressed="false" title="Nói với AI (Ctrl+M) · chuột phải: cài đặt giọng nói" aria-label="Nhập bằng giọng nói">
             <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg>
+          </button>
+          <button type="button" class="ai-icon-btn ai-hf" id="ai-handsfree" data-chat="handsfree" aria-pressed="false" title="Rảnh tay: nói liên tục, AI đáp bằng giọng nói (Ctrl+Shift+M)" aria-label="Chế độ rảnh tay">
+            <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 15v-3a8 8 0 0116 0v3"/><rect x="3" y="14" width="4" height="6" rx="1.5"/><rect x="17" y="14" width="4" height="6" rx="1.5"/></svg>
           </button>
           <button type="button" class="ai-send" data-chat="send" disabled title="Gửi (Ctrl+Enter)">
             Gửi <kbd>Ctrl</kbd><span aria-hidden="true">↵</span>
@@ -287,6 +293,7 @@
   <script src="js/help.js"></script>
   <script src="js/skill.js"></script>
   <script src="js/ai.js"></script>
+  <script src="js/voice.js"></script>
   <script src="js/export.js"></script>
   <script src="js/editor.js"></script>
   <script src="js/ui.js"></script>

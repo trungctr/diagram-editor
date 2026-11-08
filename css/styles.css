@@ -875,3 +875,57 @@ button.help-thumb:hover { border-color: var(--accent); background: var(--accent-
 .ai-think.on { color: var(--accent); border-color: var(--accent-border); background: var(--accent-soft); }
 .ai-think:disabled { cursor: default; opacity: .85; }
 .ai-think:disabled:hover { color: var(--accent); }
+
+/* ------------------------------------------------------------ giọng nói */
+.ai-mic { position: relative; }
+.ai-mic.listening {
+  color: #fff;
+  background: var(--err);
+  border-color: var(--err);
+  box-shadow: 0 0 0 calc(3px + var(--lvl, 0) * 9px) rgba(220, 38, 38, .22);
+  transition: box-shadow .08s linear;
+  animation: mic-pulse 1.3s ease-in-out infinite;
+}
+.ai-mic.listening:hover { background: var(--err); color: #fff; filter: brightness(1.08); }
+@keyframes mic-pulse { 0%, 100% { outline: 0 solid rgba(220, 38, 38, .35); } 50% { outline: 5px solid rgba(220, 38, 38, 0); } }
+.ai-mic.loading, .ai-mic.processing { color: var(--accent); background: var(--accent-soft); }
+.ai-mic.loading::after, .ai-mic.processing::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  border-top-color: var(--accent);
+  animation: ai-spin .8s linear infinite;
+}
+.ai-hf.on { color: #fff; background: var(--ok); border-color: var(--ok); }
+.ai-hf.on:hover { background: var(--ok); color: #fff; filter: brightness(1.08); }
+#ai-prompt.interim { color: var(--muted); font-style: italic; }
+.ai-voice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 10px;
+  border-radius: 9px;
+  background: var(--soft-err);
+  color: var(--err);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.ai-voice[hidden] { display: none !important; }
+.ai-voice.load { background: var(--soft-accent); color: var(--accent); }
+.ai-voice.hf { background: var(--soft-accent); color: var(--ok); }
+.ai-voice-dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; flex-shrink: 0; animation: ai-fade 1.2s ease-in-out infinite; }
+.voice-modal { width: min(560px, calc(100vw - 32px)); max-height: calc(100vh - 40px); overflow-y: auto; }
+.voice-modal > * { flex-shrink: 0; }
+.voice-modal .chk { white-space: normal; display: flex; gap: 8px; align-items: flex-start; font-size: 12.5px; margin: 10px 0 4px; color: var(--text-2); line-height: 1.4; }
+.voice-modal .chk input { margin-top: 2px; }
+.v-info { margin: -4px 0 10px; }
+.v-row { display: flex; gap: 8px; align-items: flex-end; margin-top: 6px; }
+.v-row .f { flex: 1; min-width: 0; margin: 0; }
+.v-row .btn { flex-shrink: 0; height: 32px; }
+.v-cmds { margin: 2px 0 6px 24px; font-size: 12px; }
+.v-cmds summary { cursor: pointer; color: var(--accent); }
+.v-cmds table { margin-top: 6px; display: block; max-height: 210px; overflow-y: auto; }
+.ai-modal .modal-actions .ai-voice-link { margin-right: auto; }
+@media (prefers-reduced-motion: reduce) { .ai-mic.listening, .ai-voice-dot, .ai-mic.loading::after, .ai-mic.processing::after { animation: none; } }
