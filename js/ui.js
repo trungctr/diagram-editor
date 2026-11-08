@@ -116,6 +116,67 @@
     }).observe(stage);
   }
 
+  // ================================================================ CHAT AI
+  // Hiện mới có giao diện. Phần kết nối AI sẽ gắn vào các hàm CHAT_ACTIONS bên dưới.
+  const CHAT_KEY = 'diagram-editor:chat-min';
+  const CHAT_ACTIONS = {
+    apikey: () => UI.toast('Thêm API key: tính năng đang được phát triển', 'info'),
+    context: () => UI.toast('Copy context: tính năng đang được phát triển', 'info'),
+    mic: () => UI.toast('Nhập bằng giọng nói: tính năng đang được phát triển', 'info'),
+    send: (text) => UI.toast(`Chat AI đang được phát triển – chưa gửi được: “${text.slice(0, 60)}${text.length > 60 ? '…' : ''}”`, 'info'),
+  };
+
+  function initChat() {
+    const box = $('#ai-chat'), pill = $('#ai-chat-pill'), ta = $('#ai-prompt'), send = $('[data-chat="send"]', box);
+    const autosize = () => {
+      ta.style.height = 'auto';
+      // ô trống: trả về chiều cao 1 dòng (không để placeholder dài làm ô cao lên)
+      ta.style.height = ta.value ? Math.min(ta.scrollHeight, 160) + 'px' : '';
+      send.disabled = !ta.value.trim();
+    };
+    const doSend = () => {
+      const text = ta.value.trim();
+      if (!text) return;
+      CHAT_ACTIONS.send(text);
+    };
+    const setMin = (min) => {
+      box.hidden = min;
+      pill.hidden = !min;
+      try {
+        localStorage.setItem(CHAT_KEY, min ? '1' : '0');
+      } catch (_) {
+        /* ignore */
+      }
+    };
+    ta.addEventListener('input', autosize);
+    ta.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        doSend();
+      } else if (e.key === 'Escape') ta.blur();
+    });
+    box.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-chat]');
+      if (!b) return;
+      const act = b.dataset.chat;
+      if (act === 'send') doSend();
+      else if (act === 'minimize') setMin(true);
+      else CHAT_ACTIONS[act] && CHAT_ACTIONS[act]();
+    });
+    pill.addEventListener('click', () => {
+      setMin(false);
+      ta.focus();
+    });
+    let min = false;
+    try {
+      min = localStorage.getItem(CHAT_KEY) === '1';
+    } catch (_) {
+      /* mặc định: hiện khung chat */
+    }
+    setMin(min);
+    autosize();
+  }
+
   function initTheme() {
     UI.setTheme(currentTheme(), false);
     // theo hệ điều hành nếu người dùng chưa tự chọn
@@ -333,6 +394,7 @@
     });
     initTheme();
     initPanels();
+    initChat();
     initToolbar();
     initPalette();
     initInspector();

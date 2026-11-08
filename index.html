@@ -180,6 +180,37 @@
       <svg id="canvas" xmlns="http://www.w3.org/2000/svg"></svg>
       <button id="toggle-left" class="panel-toggle left" aria-controls="palette" aria-expanded="true" title="Thu gọn thư viện hình (Ctrl+B)" aria-label="Thu gọn / mở thư viện hình"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
       <button id="toggle-right" class="panel-toggle right" aria-controls="inspector" aria-expanded="true" title="Thu gọn bảng thuộc tính (Ctrl+Alt+B)" aria-label="Thu gọn / mở bảng thuộc tính"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+      <!-- ============================ CHAT AI ============================ -->
+      <section id="ai-chat" class="ai-chat" aria-label="Chat với AI">
+        <div class="ai-chat-top">
+          <button type="button" class="ai-chip" data-chat="apikey" title="Thêm / đổi API key của nhà cung cấp AI">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="15" cy="9" r="5"/><path d="M11.5 12.5L4 20v1h3v-2h2v-2h2l1.5-1.5M16.5 7.5h.01"/></svg>
+            <span>API key</span>
+            <span class="ai-dot" title="Chưa có API key"></span>
+          </button>
+          <button type="button" class="ai-chip" data-chat="context" title="Sao chép ngữ cảnh (diagram hiện tại dạng JSON + quy ước) để dán vào công cụ AI khác">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M4 16V6a2 2 0 012-2h10"/></svg>
+            <span>Copy context</span>
+          </button>
+          <button type="button" class="ai-icon-btn ai-min" data-chat="minimize" title="Thu nhỏ khung chat" aria-label="Thu nhỏ khung chat">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 12h12"/></svg>
+          </button>
+        </div>
+        <div class="ai-chat-input">
+          <textarea id="ai-prompt" rows="1" spellcheck="false" placeholder="Hỏi AI về diagram này…" title="Ví dụ: “Vẽ quy trình đăng nhập bằng BPMN”, “Giải thích diagram này” – Ctrl+Enter để gửi" aria-label="Nội dung gửi cho AI"></textarea>
+          <button type="button" class="ai-icon-btn" data-chat="mic" title="Nhập bằng giọng nói" aria-label="Nhập bằng giọng nói">
+            <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg>
+          </button>
+          <button type="button" class="ai-send" data-chat="send" disabled title="Gửi (Ctrl+Enter)">
+            Gửi <kbd>Ctrl</kbd><span aria-hidden="true">↵</span>
+          </button>
+        </div>
+      </section>
+      <button type="button" id="ai-chat-pill" class="ai-chat-pill" hidden title="Mở khung chat AI">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M12 2.5l1.9 5.6L19.5 10l-5.6 1.9L12 17.5l-1.9-5.6L4.5 10l5.6-1.9zM19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9z"/></svg>
+        Chat AI
+      </button>
+
       <textarea id="text-editor" hidden spellcheck="false" placeholder="Nhập nội dung…  (Ctrl+Enter để lưu, Esc để huỷ)"></textarea>
       <div id="toast" hidden></div>
     </main>
