@@ -61,6 +61,73 @@
     },
   };
 
+  // ------------------------------------------------------------ gọi chat
+  // messages: [{ role: 'user' | 'assistant', content: string }]
+  // system: skill prompt – đặt ở system instruction (một lần cho cả hội thoại),
+  //         KHÔNG chép vào từng tin nhắn; bật cache để không bị tính phí lại đầy đủ.
+  // Trả về { text, truncated }
+  const CHAT = {
+    async gemini({ key, model, system, messages, signal }) {
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(key)}`, {
+        method: 'POST',
+        signal,
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: system }] },
+          contents: messages.map((m) => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] })),
+        }),
+      });
+      if (!res.ok) throw await httpError(res);
+      const data = await res.json();
+      if (data.promptFeedback && data.promptFeedback.blockReason) throw new Error(`Gemini từ chối yêu cầu (${data.promptFeedback.blockReason})`);
+      const cand = (data.candidates || [])[0];
+      if (!cand) throw new Error('Gemini không trả về kết quả');
+      const text = ((cand.content && cand.content.parts) || []).filter((p) => p.text && !p.thought).map((p) => p.text).join('');
+      return { text, truncated: cand.finishReason === 'MAX_TOKENS' };
+    },
+    async openai({ key, model, system, messages, signal }) {
+      const res = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        signal,
+        headers: { 'content-type': 'application/json', Authorization: `Bearer ${key}` },
+        body: JSON.stringify({ model, messages: [{ role: 'system', content: system }, ...messages] }),
+      });
+      if (!res.ok) throw await httpError(res);
+      const data = await res.json();
+      const ch = (data.choices || [])[0];
+      if (!ch) throw new Error('OpenAI không trả về kết quả');
+      if (ch.message && ch.message.refusal) throw new Error('OpenAI từ chối yêu cầu: ' + ch.message.refusal);
+      return { text: (ch.message && ch.message.content) || '', truncated: ch.finish_reason === 'length' };
+    },
+    async anthropic({ key, model, system, messages, signal }) {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        signal,
+        headers: {
+          'content-type': 'application/json',
+          'x-api-key': key,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true',
+        },
+        body: JSON.stringify({
+          model,
+          max_tokens: 16000,
+          // skill là phần cố định đầu request -> cache lại, các lượt sau chỉ tính phí đọc cache
+          system: [{ type: 'text', text: system, cache_control: { type: 'ephemeral' } }],
+          messages,
+        }),
+      });
+      if (!res.ok) throw await httpError(res);
+      const data = await res.json();
+      if (data.stop_reason === 'refusal') {
+        const why = data.stop_details && (data.stop_details.explanation || data.stop_details.category);
+        throw new Error('Claude từ chối yêu cầu' + (why ? `: ${why}` : ''));
+      }
+      const text = (data.content || []).filter((b) => b.type === 'text').map((b) => b.text).join('');
+      return { text, truncated: data.stop_reason === 'max_tokens' };
+    },
+  };
+
   async function httpError(res) {
     let detail = '';
     try {
@@ -69,11 +136,17 @@
     } catch (_) {
       /* không có body JSON */
     }
-    const e = new Error(
-      res.status === 400 || res.status === 401 || res.status === 403
-        ? 'API key không hợp lệ hoặc không có quyền truy cập' + (detail ? ` (${detail})` : '')
-        : `Lỗi ${res.status}` + (detail ? `: ${detail}` : '')
-    );
+    const msg =
+      res.status === 401 || res.status === 403
+        ? 'API key không hợp lệ hoặc không có quyền truy cập'
+        : res.status === 404
+          ? 'Không tìm thấy mô hình (kiểm tra lại tên mô hình trong Cài đặt AI)'
+          : res.status === 429
+            ? 'Vượt giới hạn tốc độ / hạn mức của tài khoản – thử lại sau ít phút'
+            : res.status >= 500
+              ? 'Máy chủ của nhà cung cấp đang lỗi hoặc quá tải – thử lại sau'
+              : `Lỗi ${res.status}`;
+    const e = new Error(msg + (detail ? ` (${detail})` : ''));
     e.status = res.status;
     return e;
   }
@@ -115,5 +188,11 @@
       return key && model ? { provider: c.provider, providerName: PROVIDERS[c.provider].name, key, model } : null;
     },
     listModels: (provider, key) => PROVIDERS[provider].listModels(key),
+    /** Gửi hội thoại tới mô hình đang chọn. opts: { system, messages, signal } */
+    chat(opts) {
+      const a = this.active();
+      if (!a) throw new Error('Chưa cấu hình API key / mô hình');
+      return CHAT[a.provider]({ key: a.key, model: a.model, ...opts });
+    },
   };
 })(window.DE);

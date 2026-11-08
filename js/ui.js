@@ -123,8 +123,183 @@
     apikey: () => apiKeyDialog(),
     context: () => skillDialog(),
     mic: () => UI.toast('Nhập bằng giọng nói: tính năng đang được phát triển', 'info'),
-    send: (text) => UI.toast(`Chat AI đang được phát triển – chưa gửi được: “${text.slice(0, 60)}${text.length > 60 ? '…' : ''}”`, 'info'),
+    send: (text) => chatSend(text),
+    reset: () => chatReset(true),
+    closereply: () => showReply(null),
   };
+
+  // ------------------------------------------------------- hội thoại với AI
+  // Skill đặt ở system instruction MỘT LẦN cho cả cuộc trò chuyện (không chép vào từng tin nhắn,
+  // nhà cung cấp cache lại phần này). Lịch sử chỉ giữ lời người dùng + phần giải thích của AI
+  // (bỏ khối JSON); diagram hiện tại được gửi kèm lượt mới nhất để AI luôn sửa đúng bản đang mở.
+  const HISTORY_MAX = 8; // số tin nhắn cũ giữ lại
+  const chat = { system: null, history: [], busy: null };
+  const FUN = [
+    'Vibing…', 'Hooking…', 'Đang phác thảo…', 'Nối mũi tên…', 'Căn hàng các hình…', 'Pha cà phê cho AI…',
+    'Đếm gateway…', 'Vẽ hình thoi…', 'Xếp swimlane…', 'Thì thầm với model…', 'Lắp ghép JSON…',
+    'Mài bút chì…', 'Soi ký hiệu chuẩn…', 'Gỡ rối đường nối…', 'Brainstorming…', 'Cooking…',
+  ];
+
+  function updateTurns() {
+    const turns = chat.history.filter((m) => m.role === 'user').length;
+    const el = $('#ai-turns'), rs = $('#ai-reset');
+    el.hidden = rs.hidden = !turns;
+    el.textContent = `Lượt ${turns}`;
+    el.title = `Cuộc trò chuyện đang có ${turns} lượt – AI nhớ các lượt này. Skill chỉ đặt một lần ở system instruction.`;
+  }
+
+  function chatReset(announce) {
+    if (chat.busy) chat.busy.ctrl.abort();
+    chat.system = null;
+    chat.history = [];
+    updateTurns();
+    if (announce) {
+      showReply(null);
+      UI.toast('Đã bắt đầu cuộc trò chuyện mới – AI không còn nhớ các lượt trước', 'info');
+    }
+  }
+
+  /** Hiện lời đáp / thông báo trong khung chat. kind: 'ok' | 'err' | '' ; text = null để ẩn */
+  function showReply(text, kind = '', title = 'AI') {
+    const box = $('#ai-reply');
+    if (text == null) {
+      box.hidden = true;
+      return;
+    }
+    box.hidden = false;
+    box.className = 'ai-reply' + (kind ? ' ' + kind : '');
+    $('#ai-reply-title').textContent = title;
+    $('#ai-reply-body').textContent = text;
+  }
+
+  function setBusy(on) {
+    const busyEl = $('#ai-busy'), send = $('[data-chat="send"]'), txt = $('#ai-busy-text'), time = $('#ai-busy-time');
+    if (on) {
+      const started = Date.now();
+      let i = Math.floor(Math.random() * FUN.length);
+      txt.textContent = FUN[i];
+      time.textContent = '0s';
+      busyEl.hidden = false;
+      const tick = setInterval(() => {
+        const sec = Math.floor((Date.now() - started) / 1000);
+        time.textContent = sec < 60 ? `${sec}s` : `${Math.floor(sec / 60)}m${String(sec % 60).padStart(2, '0')}s`;
+      }, 250);
+      const rotate = setInterval(() => {
+        i = (i + 1 + Math.floor(Math.random() * 3)) % FUN.length;
+        txt.textContent = FUN[i];
+      }, 1700);
+      chat.busy = { ctrl: new AbortController(), tick, rotate };
+      send.disabled = false;
+      send.classList.add('stop');
+      send.innerHTML = 'Dừng';
+      send.title = 'Dừng yêu cầu đang chạy';
+    } else {
+      if (chat.busy) {
+        clearInterval(chat.busy.tick);
+        clearInterval(chat.busy.rotate);
+      }
+      chat.busy = null;
+      busyEl.hidden = true;
+      send.classList.remove('stop');
+      send.innerHTML = 'Gửi <kbd>Ctrl</kbd><span aria-hidden="true">↵</span>';
+      send.title = 'Gửi (Ctrl+Enter)';
+      send.disabled = !$('#ai-prompt').value.trim();
+    }
+  }
+
+  /** Tách phần giải thích (bỏ khối ```json) khỏi lời đáp của AI */
+  const stripJsonBlock = (text) => text.replace(/```(?:json)?\s*[\s\S]*?```/gi, '').trim();
+
+  async function chatSend(text) {
+    if (chat.busy) return;
+    if (!DE.ai.active()) {
+      UI.toast('Hãy thêm API key và chọn mô hình trước khi chat', 'warn');
+      apiKeyDialog();
+      return;
+    }
+    // Skill của CẢ 3 chế độ, đặt MỘT lần cho cả cuộc trò chuyện: người dùng hỏi loại diagram nào
+    // AI cũng biết ký hiệu, và khi diagram AI vẽ làm app đổi chế độ thì hội thoại vẫn tiếp tục.
+    if (!chat.system) {
+      chat.system = DE.buildSkillPrompt({ modes: Object.keys(DE.MODES) });
+      chat.history = [];
+    }
+    const hasDoc = !docIsEmpty();
+    const userMsg =
+      text +
+      (hasDoc
+        ? '\n\n---\nDiagram đang mở trong app (nếu yêu cầu là chỉnh sửa/bổ sung thì sửa trên tài liệu này và trả lại TOÀN BỘ tài liệu, giữ id cũ; nếu là vẽ mới thì bỏ qua):\n```json\n' +
+          JSON.stringify(store.doc) +
+          '\n```'
+        : '');
+    const messages = [...chat.history.slice(-HISTORY_MAX), { role: 'user', content: userMsg }];
+    showReply(null);
+    setBusy(true);
+    const signal = chat.busy.ctrl.signal;
+    let res;
+    try {
+      res = await DE.ai.chat({ system: chat.system, messages, signal });
+    } catch (e) {
+      setBusy(false);
+      if (e.name === 'AbortError') {
+        showReply('Đã dừng yêu cầu. Nội dung bạn viết vẫn còn trong ô chat.', '', 'Đã dừng');
+        return;
+      }
+      const msg = e instanceof TypeError ? 'Không kết nối được tới nhà cung cấp (kiểm tra mạng).' : e.message;
+      showReply(msg, 'err', 'Lỗi');
+      UI.toast('Gửi không thành công: ' + msg, 'error');
+      return;
+    }
+    setBusy(false);
+    // AI đã trả lời -> lưu lượt này (không lưu khối JSON và diagram để lịch sử gọn)
+    const explain = stripJsonBlock(res.text || '');
+    const ta = $('#ai-prompt');
+    ta.value = '';
+    ta.dispatchEvent(new Event('input'));
+    let json = null;
+    try {
+      json = parseLooseJSON(res.text || '');
+    } catch (_) {
+      json = null;
+    }
+    if (!json || typeof json !== 'object' || !Array.isArray(json.nodes)) {
+      // không có diagram -> hiện câu trả lời dạng chữ
+      chat.history.push({ role: 'user', content: text }, { role: 'assistant', content: res.text || '(trống)' });
+      updateTurns();
+      showReply((res.text || 'AI không trả về nội dung.') + (res.truncated ? '\n\n⚠ Câu trả lời bị cắt do quá dài.' : ''), res.text ? '' : 'err');
+      return;
+    }
+    chat.history.push({ role: 'user', content: text }, { role: 'assistant', content: (explain || 'Đã tạo diagram.') + '\n[Đã trả JSON đầy đủ – app đã nhận]' });
+    updateTurns();
+    // đưa vào ô JSON rồi áp dụng ngay
+    const jt = $('#json-text');
+    jt.value = JSON.stringify(json, null, 2);
+    jsonDirty = true;
+    if (!$('#app').classList.contains('right-collapsed')) activateTab('json');
+    const r = await applyJson();
+    if (r.ok) {
+      E.setSelection([]);
+      E.fit();
+      const notes = [r.removed.length ? `bỏ ${r.removed.length} phần tử không hợp lệ` : '', r.fixed.length ? `sửa ${r.fixed.length} giá trị` : ''].filter(Boolean).join(', ');
+      showReply(
+        (explain || 'Đã vẽ xong diagram theo yêu cầu.') +
+          (notes ? `\n\n(App đã tự ${notes}.)` : '') +
+          (res.truncated ? '\n\n⚠ Câu trả lời có thể bị cắt do quá dài.' : '') +
+          '\n\n↶ Không ưng? Bấm Hoàn tác trên thanh công cụ hoặc Ctrl+Z để quay lại diagram trước.',
+        'ok',
+        `Xong · ${r.doc.nodes.length} hình, ${r.doc.edges.length} đường nối`
+      );
+      UI.toast('✓ Đã áp dụng diagram từ AI. Hoàn tác: nút ↶ trên thanh công cụ hoặc Ctrl+Z', 'ok');
+      const undoBtn = $('[data-action="undo"]');
+      undoBtn.classList.remove('pulse');
+      void undoBtn.offsetWidth; // chạy lại hiệu ứng
+      undoBtn.classList.add('pulse');
+      setTimeout(() => undoBtn.classList.remove('pulse'), 3200);
+    } else if (r.cancelled) {
+      showReply('Bạn đã huỷ áp dụng. JSON của AI vẫn nằm trong tab JSON để xem hoặc sửa rồi bấm "Áp dụng".', '', 'Chưa áp dụng');
+    } else {
+      showReply('AI trả về JSON nhưng không áp dụng được: ' + r.error + '\nJSON vẫn nằm trong tab JSON để bạn xem / sửa.', 'err', 'Lỗi áp dụng');
+    }
+  }
 
   /** Sao chép văn bản vào clipboard (có phương án dự phòng). Trả về true nếu thành công */
   async function copyText(text, fallbackEl) {
@@ -416,9 +591,10 @@
       ta.style.height = 'auto';
       // ô trống: trả về chiều cao 1 dòng (không để placeholder dài làm ô cao lên)
       ta.style.height = ta.value ? Math.min(ta.scrollHeight, 160) + 'px' : '';
-      send.disabled = !ta.value.trim();
+      if (!chat.busy) send.disabled = !ta.value.trim();
     };
     const doSend = () => {
+      if (chat.busy) return chat.busy.ctrl.abort(); // đang chờ -> nút Gửi là nút Dừng
       const text = ta.value.trim();
       if (!text) return;
       CHAT_ACTIONS.send(text);
@@ -436,7 +612,7 @@
     ta.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
         e.preventDefault();
-        doSend();
+        if (!chat.busy) doSend(); // Ctrl+Enter không vô tình dừng yêu cầu đang chạy
       } else if (e.key === 'Escape') ta.blur();
     });
     box.addEventListener('click', (e) => {
@@ -1524,18 +1700,21 @@
   }
 
   let applying = false;
+  /** Áp dụng nội dung tab JSON. Trả về { ok, doc, removed, fixed, cancelled, error } */
   async function applyJson() {
-    if (applying) return;
+    if (applying) return { ok: false, error: 'Đang có một thao tác áp dụng khác' };
     let raw, res;
     try {
       raw = parseLooseJSON($('#json-text').value);
     } catch (e) {
-      return showJsonMsg('JSON sai cú pháp – chưa áp dụng gì.\n' + e.message, 'err');
+      showJsonMsg('JSON sai cú pháp – chưa áp dụng gì.\n' + e.message, 'err');
+      return { ok: false, error: 'JSON sai cú pháp: ' + e.message };
     }
     try {
       res = DE.normalizeDoc(raw);
     } catch (e) {
-      return showJsonMsg('Không áp dụng được: ' + e.message, 'err');
+      showJsonMsg('Không áp dụng được: ' + e.message, 'err');
+      return { ok: false, error: e.message };
     }
     const { doc, removed, fixed } = res;
     if (removed.length || fixed.length) {
@@ -1553,13 +1732,17 @@
         cancel: 'Huỷ – quay lại sửa JSON',
       });
       applying = false;
-      if (!ok) return showJsonMsg('Đã huỷ – diagram chưa thay đổi. Sửa JSON rồi bấm "Áp dụng" lại.', 'warn');
+      if (!ok) {
+        showJsonMsg('Đã huỷ – diagram chưa thay đổi. Sửa JSON rồi bấm "Áp dụng" lại.', 'warn');
+        return { ok: false, cancelled: true };
+      }
     }
     jsonDirty = false;
     store.load(doc);
     const notes = [removed.length ? `đã xoá ${removed.length} đối tượng` : '', fixed.length ? `đã sửa ${fixed.length} giá trị` : ''].filter(Boolean).join(', ');
     showJsonMsg(`Đã áp dụng ✓ (${doc.nodes.length} hình, ${doc.edges.length} đường nối)${notes ? ' – ' + notes : ''}. Ctrl+Z để hoàn tác.`, notes ? 'warn' : 'ok');
     refreshJson(true);
+    return { ok: true, doc, removed, fixed };
   }
 
   // ============================================================ DOC CHANGE

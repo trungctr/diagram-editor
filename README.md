@@ -44,8 +44,14 @@ Hoặc chạy qua web server tĩnh bất kỳ, ví dụ: `npx serve .` hay `pyth
   chạy offline nhờ service worker (`sw.js`, network-first), mở file `.json` trực tiếp từ hệ điều hành khi đã cài
   (`file_handlers`). Icon trong `icons/` (SVG gốc + PNG 192/512, maskable, apple-touch-icon).
   Khi phát hành bản mới có thêm/bớt file, cập nhật `PRECACHE` và tăng `VERSION` trong `sw.js`.
-- **Chat AI** *(đang phát triển)*: khung chat nổi ở góc dưới phải canvas (API key, Copy context, giọng nói,
-  gửi bằng `Ctrl+Enter`), thu nhỏ được thành nút “Chat AI”.
+- **Chat AI**: khung chat nổi ở góc dưới phải canvas, thu nhỏ được thành nút “Chat AI”.
+  - **Gửi prompt** (`Ctrl+Enter`): gọi mô hình đã chọn; trong lúc chờ hiện trạng thái vui (“Vibing…”, “Hooking…”…)
+    xoay liên tục + đếm giây, nút Gửi thành **Dừng**. Kết quả JSON được đưa vào tab JSON và **áp dụng ngay**
+    (vẫn qua bước kiểm tra hợp lệ), rồi nhắc hoàn tác bằng nút ↶ hoặc `Ctrl+Z`. Câu trả lời dạng chữ / lỗi hiện
+    trong khung chat.
+  - **Skill chỉ đặt một lần** ở system instruction cho cả cuộc trò chuyện (skill cả 3 chế độ, không chép vào từng
+    tin nhắn, có cache prompt); lịch sử chỉ giữ lời người dùng + giải thích của AI (bỏ JSON), diagram hiện tại
+    gửi kèm lượt mới nhất. Nút ↻ để bắt đầu cuộc trò chuyện mới.
   - **API key** (đã hoạt động): chọn nhà cung cấp (Google Gemini / OpenAI / Anthropic Claude), nhập key (luôn
     hiển thị dạng che bớt `AIza••••••WXYZ`), chọn mô hình – danh sách tải trực tiếp từ tài khoản bằng key,
     có gợi ý và “Khác…” để tự nhập. Key lưu riêng cho từng nhà cung cấp trong `localStorage` của trình duyệt,

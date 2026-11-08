@@ -192,9 +192,23 @@
             <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M4 16V6a2 2 0 012-2h10"/></svg>
             <span>Copy context</span>
           </button>
-          <button type="button" class="ai-icon-btn ai-min" data-chat="minimize" title="Thu nhỏ khung chat" aria-label="Thu nhỏ khung chat">
+          <span class="ai-spacer"></span>
+          <span class="ai-turns" id="ai-turns" hidden></span>
+          <button type="button" class="ai-icon-btn" data-chat="reset" title="Cuộc trò chuyện mới (AI quên các lượt trước)" aria-label="Cuộc trò chuyện mới" hidden id="ai-reset">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.4-5.7M4 4v4.5h4.5"/></svg>
+          </button>
+          <button type="button" class="ai-icon-btn" data-chat="minimize" title="Thu nhỏ khung chat" aria-label="Thu nhỏ khung chat">
             <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 12h12"/></svg>
           </button>
+        </div>
+        <div class="ai-reply" id="ai-reply" hidden>
+          <div class="ai-reply-head"><span id="ai-reply-title">AI</span><button type="button" class="ai-icon-btn" data-chat="closereply" title="Đóng" aria-label="Đóng lời đáp">×</button></div>
+          <div class="ai-reply-body" id="ai-reply-body"></div>
+        </div>
+        <div class="ai-busy" id="ai-busy" hidden aria-live="polite">
+          <span class="ai-spinner" aria-hidden="true"></span>
+          <span class="ai-busy-text" id="ai-busy-text">Vibing…</span>
+          <span class="ai-busy-time" id="ai-busy-time">0s</span>
         </div>
         <div class="ai-chat-input">
           <textarea id="ai-prompt" rows="1" spellcheck="false" placeholder="Hỏi AI về diagram này…" title="Ví dụ: “Vẽ quy trình đăng nhập bằng BPMN”, “Giải thích diagram này” – Ctrl+Enter để gửi" aria-label="Nội dung gửi cho AI"></textarea>
