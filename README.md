@@ -44,8 +44,13 @@ Hoặc chạy qua web server tĩnh bất kỳ, ví dụ: `npx serve .` hay `pyth
   chạy offline nhờ service worker (`sw.js`, network-first), mở file `.json` trực tiếp từ hệ điều hành khi đã cài
   (`file_handlers`). Icon trong `icons/` (SVG gốc + PNG 192/512, maskable, apple-touch-icon).
   Khi phát hành bản mới có thêm/bớt file, cập nhật `PRECACHE` và tăng `VERSION` trong `sw.js`.
-- **Chat AI** *(đang phát triển – mới có giao diện)*: khung chat nổi ở góc dưới phải canvas với nút API key,
-  Copy context, nhập giọng nói và gửi (`Ctrl+Enter`); có thể thu nhỏ thành nút “Chat AI”.
+- **Chat AI** *(đang phát triển)*: khung chat nổi ở góc dưới phải canvas (API key, Copy context, giọng nói,
+  gửi bằng `Ctrl+Enter`), thu nhỏ được thành nút “Chat AI”.
+  - **Copy context = skill prompt** (đã hoạt động): sinh một đoạn prompt dạy AI bên ngoài (Gemini, ChatGPT,
+    Claude…) định dạng JSON của app – danh sách type, kích thước mặc định, quy tắc hợp lệ, quy tắc bố cục từng
+    mode, ví dụ mẫu; tuỳ chọn kèm diagram hiện tại để AI sửa tiếp. Sao chép hoặc tải `.md`. Dán skill vào AI,
+    viết yêu cầu, rồi dán câu trả lời vào tab JSON → Áp dụng (nhận cả khối ```` ```json ```` lẫn lời dẫn).
+    Nội dung sinh từ `js/skill.js` nên luôn khớp thư viện hình.
 - **Thu gọn panel**: nút ‹ › ở mép trái / phải canvas (hoặc `Ctrl+B` cho thư viện, `Ctrl+Alt+B` cho bảng thuộc
   tính) để có thêm chỗ vẽ trên màn hình nhỏ. Mặc định hiện cả hai; lựa chọn được ghi nhớ, diagram đứng yên khi
   panel co giãn.

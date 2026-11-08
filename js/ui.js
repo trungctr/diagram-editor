@@ -121,10 +121,101 @@
   const CHAT_KEY = 'diagram-editor:chat-min';
   const CHAT_ACTIONS = {
     apikey: () => UI.toast('Thêm API key: tính năng đang được phát triển', 'info'),
-    context: () => UI.toast('Copy context: tính năng đang được phát triển', 'info'),
+    context: () => skillDialog(),
     mic: () => UI.toast('Nhập bằng giọng nói: tính năng đang được phát triển', 'info'),
     send: (text) => UI.toast(`Chat AI đang được phát triển – chưa gửi được: “${text.slice(0, 60)}${text.length > 60 ? '…' : ''}”`, 'info'),
   };
+
+  /** Sao chép văn bản vào clipboard (có phương án dự phòng). Trả về true nếu thành công */
+  async function copyText(text, fallbackEl) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch (_) {
+      if (!fallbackEl) return false;
+      fallbackEl.focus();
+      fallbackEl.select();
+      try {
+        return document.execCommand('copy');
+      } catch (__) {
+        return false;
+      }
+    }
+  }
+
+  // ---------------------------------------------------- skill prompt cho AI
+  let skillScope = 'mode';
+  function skillDialog() {
+    const hasDoc = !docIsEmpty();
+    const back = document.createElement('div');
+    back.className = 'modal-backdrop';
+    back.innerHTML =
+      `<div class="modal embed-modal skill-modal" role="dialog" aria-modal="true" aria-labelledby="skill-title">` +
+      `<h3 id="skill-title">Skill prompt cho AI</h3>` +
+      `<p class="modal-msg">Đoạn prompt này dạy AI (Gemini, ChatGPT, Claude…) định dạng JSON của Diagram Editor.</p>` +
+      `<ol class="skill-steps">` +
+      `<li>Sao chép skill rồi dán vào ô chat của AI, viết yêu cầu của bạn ngay sau đó (vd: <i>“Vẽ quy trình đăng ký tài khoản bằng BPMN”</i>).</li>` +
+      `<li>Sao chép khối <code>json</code> AI trả về.</li>` +
+      `<li>Mở tab <b>JSON</b> bên phải → dán → bấm <b>Áp dụng</b> (dán cả câu trả lời có <code>\`\`\`json</code> cũng được).</li>` +
+      `</ol>` +
+      `<div class="embed-opts">` +
+      `<label class="embed-opt"><input type="radio" name="skill-scope" value="mode"${skillScope === 'mode' ? ' checked' : ''}>` +
+      `<div><b>Chỉ chế độ ${esc(modeDef().name)}</b><span>Ngắn gọn, AI tập trung đúng loại diagram bạn đang vẽ.</span></div></label>` +
+      `<label class="embed-opt"><input type="radio" name="skill-scope" value="all"${skillScope === 'all' ? ' checked' : ''}>` +
+      `<div><b>Cả 3 chế độ</b><span>Flowchart, BPMN và UML/ERD – dài hơn, dùng khi chưa biết sẽ vẽ loại nào.</span></div></label>` +
+      `</div>` +
+      (hasDoc ? `<label class="chk embed-sel"><input type="checkbox" id="skill-doc"> Kèm diagram hiện tại (${store.doc.nodes.length} hình, ${store.doc.edges.length} đường nối) để AI chỉnh sửa tiếp</label>` : '') +
+      `<textarea class="code embed-code skill-code" readonly spellcheck="false" aria-label="Nội dung skill prompt"></textarea>` +
+      `<div class="embed-info msg"></div>` +
+      `<div class="modal-actions"><button class="btn" data-r="close">Đóng</button><button class="btn" data-r="download">Tải file .md</button><button class="btn primary" data-r="copy">Sao chép skill</button></div></div>`;
+    const ta = back.querySelector('.skill-code');
+    const info = back.querySelector('.embed-info');
+    const copyBtn = back.querySelector('[data-r="copy"]');
+    const build = () =>
+      DE.buildSkillPrompt({
+        modes: skillScope === 'all' ? Object.keys(DE.MODES) : [mode],
+        doc: back.querySelector('#skill-doc')?.checked ? store.doc : null,
+      });
+    const update = () => {
+      ta.value = build();
+      const chars = ta.value.length;
+      info.textContent = `${(new Blob([ta.value]).size / 1024).toFixed(1)} KB · khoảng ${Math.round(chars / 3.5).toLocaleString('vi-VN')} token`;
+    };
+    const close = () => {
+      window.removeEventListener('keydown', onKey, true);
+      back.remove();
+    };
+    const onKey = (e) => {
+      e.stopPropagation();
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        close();
+      }
+    };
+    back.addEventListener('change', (e) => {
+      if (e.target.name === 'skill-scope') skillScope = e.target.value;
+      update();
+    });
+    back.addEventListener('click', async (e) => {
+      const b = e.target.closest('[data-r]');
+      if ((b && b.dataset.r === 'close') || e.target === back) return close();
+      if (!b) return;
+      if (b.dataset.r === 'download') {
+        DE.download(`diagram-editor-skill-${skillScope === 'all' ? 'all' : mode}.md`, new Blob([ta.value], { type: 'text/markdown' }));
+        UI.toast('Đã tải file skill (.md) – mở file, sao chép nội dung và dán vào AI khi cần', 'ok');
+      } else if (b.dataset.r === 'copy') {
+        if (await copyText(ta.value, ta)) {
+          copyBtn.textContent = 'Đã sao chép ✓';
+          setTimeout(() => (copyBtn.textContent = 'Sao chép skill'), 1600);
+          UI.toast('Đã sao chép skill – dán vào ô chat của AI rồi viết yêu cầu ngay sau đó', 'ok');
+        } else UI.toast('Trình duyệt chặn clipboard – hãy chọn nội dung và nhấn Ctrl+C', 'warn');
+      }
+    });
+    window.addEventListener('keydown', onKey, true);
+    document.body.appendChild(back);
+    update();
+    copyBtn.focus();
+  }
 
   function initChat() {
     const box = $('#ai-chat'), pill = $('#ai-chat-pill'), ta = $('#ai-prompt'), send = $('[data-chat="send"]', box);
@@ -1210,12 +1301,40 @@
   }
   const scheduleJson = DE.debounce(() => refreshJson(false), 250);
 
+  /**
+   * Parse JSON "dễ dãi": nhận cả câu trả lời dán nguyên từ AI – lấy nội dung khối ```json … ```,
+   * hoặc đoạn từ dấu { đầu tiên tới } cuối cùng.
+   */
+  function parseLooseJSON(text) {
+    try {
+      return JSON.parse(text);
+    } catch (err) {
+      const fence = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
+      if (fence) {
+        try {
+          return JSON.parse(fence[1]);
+        } catch (_) {
+          /* thử cách tiếp theo */
+        }
+      }
+      const a = text.indexOf('{'), b = text.lastIndexOf('}');
+      if (a >= 0 && b > a) {
+        try {
+          return JSON.parse(text.slice(a, b + 1));
+        } catch (_) {
+          /* báo lỗi gốc */
+        }
+      }
+      throw err;
+    }
+  }
+
   let applying = false;
   async function applyJson() {
     if (applying) return;
     let raw, res;
     try {
-      raw = JSON.parse($('#json-text').value);
+      raw = parseLooseJSON($('#json-text').value);
     } catch (e) {
       return showJsonMsg('JSON sai cú pháp – chưa áp dụng gì.\n' + e.message, 'err');
     }

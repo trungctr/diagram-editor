@@ -4,7 +4,7 @@
  * mới nhất (HTML, JS, CSS luôn cùng phiên bản), mất mạng thì dùng bản đã cache.
  * Khi phát hành phiên bản mới có đổi danh sách file, tăng VERSION.
  * ========================================================================= */
-const VERSION = 'v1';
+const VERSION = 'v2';
 const CACHE = `diagram-editor-${VERSION}`;
 const PRECACHE = [
   './',
@@ -17,6 +17,7 @@ const PRECACHE = [
   'js/store.js',
   'js/templates.js',
   'js/help.js',
+  'js/skill.js',
   'js/export.js',
   'js/editor.js',
   'js/ui.js',

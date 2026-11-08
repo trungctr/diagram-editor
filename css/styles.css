@@ -668,6 +668,9 @@ textarea.code {
   box-shadow: 0 6px 18px rgba(37, 99, 235, .35);
 }
 .ai-chat-pill:hover { filter: brightness(1.08); }
+.skill-steps { margin: 0 0 10px; padding-left: 20px; font-size: 12.5px; color: var(--text-2); line-height: 1.5; }
+.skill-steps code { font-size: 11px; background: var(--hover); padding: 0 4px; border-radius: 3px; }
+.skill-code { height: 200px; }
 /* toast lên mép trên để không bị khung chat che */
 #toast { bottom: auto; top: 14px; }
 
