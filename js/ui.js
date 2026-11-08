@@ -126,6 +126,12 @@
     send: (text) => chatSend(text),
     reset: () => chatReset(true),
     closereply: () => showReply(null),
+    think: () => {
+      const c = DE.ai.load();
+      c.thinking = !c.thinking;
+      DE.ai.save(c);
+      renderQuickControls();
+    },
   };
 
   // ------------------------------------------------------- hội thoại với AI
@@ -250,6 +256,8 @@
       return;
     }
     setBusy(false);
+    // ghi chú khi cấu hình effort / thinking không được mô hình áp dụng
+    const notes = (res.notes || []).length ? '\n\nℹ ' + [...new Set(res.notes)].join('\nℹ ') : '';
     // AI đã trả lời -> lưu lượt này (không lưu khối JSON và diagram để lịch sử gọn)
     const explain = stripJsonBlock(res.text || '');
     const ta = $('#ai-prompt');
@@ -265,7 +273,7 @@
       // không có diagram -> hiện câu trả lời dạng chữ
       chat.history.push({ role: 'user', content: text }, { role: 'assistant', content: res.text || '(trống)' });
       updateTurns();
-      showReply((res.text || 'AI không trả về nội dung.') + (res.truncated ? '\n\n⚠ Câu trả lời bị cắt do quá dài.' : ''), res.text ? '' : 'err');
+      showReply((res.text || 'AI không trả về nội dung.') + (res.truncated ? '\n\n⚠ Câu trả lời bị cắt do quá dài.' : '') + notes, res.text ? '' : 'err');
       return;
     }
     chat.history.push({ role: 'user', content: text }, { role: 'assistant', content: (explain || 'Đã tạo diagram.') + '\n[Đã trả JSON đầy đủ – app đã nhận]' });
@@ -284,6 +292,7 @@
         (explain || 'Đã vẽ xong diagram theo yêu cầu.') +
           (notes ? `\n\n(App đã tự ${notes}.)` : '') +
           (res.truncated ? '\n\n⚠ Câu trả lời có thể bị cắt do quá dài.' : '') +
+          notes +
           '\n\n↶ Không ưng? Bấm Hoàn tác trên thanh công cụ hoặc Ctrl+Z để quay lại diagram trước.',
         'ok',
         `Xong · ${r.doc.nodes.length} hình, ${r.doc.edges.length} đường nối`
@@ -399,11 +408,66 @@
     if (!chip) return;
     const a = DE.ai.active();
     const short = { gemini: 'Gemini', openai: 'OpenAI', anthropic: 'Claude' };
-    chip.querySelector('span').textContent = a ? `API key · ${short[a.provider]}` : 'API key';
+    chip.querySelector('span').textContent = a ? short[a.provider] : 'API key';
     const dot = chip.querySelector('.ai-dot');
     dot.classList.toggle('ok', !!a);
     dot.title = a ? `Đang dùng ${a.providerName} – ${a.model}` : 'Chưa có API key';
     chip.title = a ? `${a.providerName} · ${a.model} · key ${DE.ai.mask(a.key)} – bấm để đổi` : 'Thêm API key của nhà cung cấp AI';
+    renderQuickControls();
+  }
+
+  /** Dropdown mô hình, effort và nút thinking trên khung chat */
+  function renderQuickControls() {
+    const sel = $('#ai-model-quick'), eff = $('#ai-effort'), think = $('#ai-think');
+    if (!sel) return;
+    const c = DE.ai.load(), p = c.provider, P = DE.ai.PROVIDERS[p], cur = c.models[p];
+    if (!c.keys[p]) {
+      sel.innerHTML = '<option value="">Mô hình: chưa có API key</option><option value="__settings">⚙ Cài đặt AI…</option>';
+      sel.value = '';
+      sel.title = 'Thêm API key để chọn mô hình';
+    } else {
+      const list = c.lists[p] && c.lists[p].length ? c.lists[p] : P.suggested.map((id) => ({ id, label: id }));
+      let html = `<optgroup label="${esc(P.name)}">` + list.map((m) => `<option value="${esc(m.id)}">${esc(m.id)}</option>`).join('') + '</optgroup>';
+      if (cur && !list.some((m) => m.id === cur)) html = `<option value="${esc(cur)}">${esc(cur)}</option>` + html;
+      html += '<option value="__settings">⚙ Đổi nhà cung cấp / tải lại danh sách…</option>';
+      sel.innerHTML = html;
+      sel.value = cur || '';
+      sel.title = `Mô hình (${P.name}): ${cur || 'chưa chọn'}`;
+    }
+    eff.value = c.effort || '';
+    const caps = DE.ai.thinkingCaps(p, cur);
+    const on = c.thinking || !caps.canDisable;
+    think.setAttribute('aria-pressed', String(on));
+    think.classList.toggle('on', on);
+    think.disabled = !caps.canDisable;
+    think.querySelector('span').textContent = !caps.canDisable ? 'Thinking: luôn bật' : on ? 'Thinking: bật' : 'Thinking: tắt';
+    think.title = !caps.canDisable
+      ? caps.note
+      : on
+        ? 'Thinking đang bật: mô hình suy luận trước khi trả lời (kỹ hơn, chậm hơn). Bấm để tắt.'
+        : 'Thinking đang tắt: trả lời nhanh, ít token hơn. Bấm để bật.';
+  }
+
+  function initQuickControls() {
+    $('#ai-model-quick').addEventListener('change', (e) => {
+      const v = e.target.value;
+      if (v === '__settings' || !v) {
+        renderQuickControls(); // trả dropdown về mô hình đang dùng
+        if (v === '__settings') apiKeyDialog();
+        return;
+      }
+      const c = DE.ai.load();
+      c.models[c.provider] = v;
+      DE.ai.save(c);
+      updateApiChip();
+      e.target.blur();
+    });
+    $('#ai-effort').addEventListener('change', (e) => {
+      const c = DE.ai.load();
+      c.effort = e.target.value;
+      DE.ai.save(c);
+      e.target.blur();
+    });
   }
 
   function apiKeyDialog() {
@@ -531,6 +595,8 @@
         (customIn.hidden ? modelSel : customIn).focus();
         return;
       }
+      // đọc lại cấu hình mới nhất (danh sách mô hình vừa tải, effort, thinking…) rồi mới ghi
+      Object.assign(cfg, DE.ai.load());
       cfg.provider = p;
       cfg.keys[p] = key;
       cfg.models[p] = model;
@@ -567,6 +633,7 @@
         renderKeyBox();
         loadModels();
       } else if (r === 'delkey') {
+        Object.assign(cfg, DE.ai.load());
         delete cfg.keys[prov()];
         delete cfg.models[prov()];
         DE.ai.save(cfg);
@@ -635,6 +702,7 @@
     }
     setMin(min);
     autosize();
+    initQuickControls();
     updateApiChip();
   }
 

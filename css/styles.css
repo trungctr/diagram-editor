@@ -851,3 +851,27 @@ button.help-thumb:hover { border-color: var(--accent); background: var(--accent-
 @keyframes undo-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0); } 50% { box-shadow: 0 0 0 4px rgba(37, 99, 235, .45); background: var(--accent-soft); color: var(--accent); } }
 #toolbar button.pulse { animation: undo-pulse 1s ease-in-out 3; }
 @media (prefers-reduced-motion: reduce) { .ai-spinner, .ai-busy-text, #toolbar button.pulse { animation: none; } }
+
+/* ------------------------------------------- chat AI: chọn mô hình, effort, thinking */
+.ai-chat { width: min(720px, calc(100% - 56px)); }
+.ai-chat-top { flex-wrap: wrap; row-gap: 6px; }
+.ai-select {
+  height: 28px;
+  max-width: 150px;
+  padding: 0 6px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--hover);
+  color: var(--text-2);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  outline: none;
+  text-overflow: ellipsis;
+}
+.ai-select-model { max-width: 175px; }
+.ai-select:hover, .ai-select:focus-visible { border-color: var(--accent-border); color: var(--accent); }
+.ai-select option, .ai-select optgroup { color: var(--text); background: var(--panel); font-weight: 400; }
+.ai-think.on { color: var(--accent); border-color: var(--accent-border); background: var(--accent-soft); }
+.ai-think:disabled { cursor: default; opacity: .85; }
+.ai-think:disabled:hover { color: var(--accent); }

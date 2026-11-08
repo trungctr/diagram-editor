@@ -192,6 +192,19 @@
             <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M4 16V6a2 2 0 012-2h10"/></svg>
             <span>Copy context</span>
           </button>
+          <select id="ai-model-quick" class="ai-select ai-select-model" title="Mô hình AI" aria-label="Chọn mô hình AI"></select>
+          <select id="ai-effort" class="ai-select" title="Effort: mức độ suy luận / công sức của mô hình – cao hơn thì kỹ hơn nhưng chậm và tốn token hơn" aria-label="Mức effort">
+            <option value="">Effort: mặc định</option>
+            <option value="low">Effort: thấp</option>
+            <option value="medium">Effort: trung bình</option>
+            <option value="high">Effort: cao</option>
+            <option value="xhigh">Effort: rất cao</option>
+            <option value="max">Effort: tối đa</option>
+          </select>
+          <button type="button" class="ai-chip ai-think" id="ai-think" data-chat="think" aria-pressed="true" title="Bật / tắt thinking (suy luận trước khi trả lời)">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.6.5 1 1.2 1 2V16h5.2v-.2c0-.8.4-1.5 1-2A6 6 0 0 0 12 3z"/></svg>
+            <span>Thinking</span>
+          </button>
           <span class="ai-spacer"></span>
           <span class="ai-turns" id="ai-turns" hidden></span>
           <button type="button" class="ai-icon-btn" data-chat="reset" title="Cuộc trò chuyện mới (AI quên các lượt trước)" aria-label="Cuộc trò chuyện mới" hidden id="ai-reset">
