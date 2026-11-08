@@ -938,3 +938,23 @@ button.help-thumb:hover { border-color: var(--accent); background: var(--accent-
 #v-mic-info { margin-top: 4px; }
 .v-credit { margin: 6px 0 4px; font-size: 11px; }
 .v-credit a { color: var(--accent); }
+
+/* ------------------------------------------------ cài đặt AI: nhà cung cấp miễn phí / chạy trên máy */
+.ai-modal { width: min(560px, 100%); max-height: calc(100vh - 40px); overflow-y: auto; }
+.ai-modal > * { flex-shrink: 0; }
+.ai-prov-note { margin: -6px 0 12px; }
+.ai-base { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 12.5px; }
+.ai-setup {
+  margin-top: 6px;
+  padding: 7px 9px;
+  border-radius: 6px;
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--text-2);
+  white-space: pre-wrap;
+  user-select: text;
+}
+.ai-setup[hidden] { display: none; }

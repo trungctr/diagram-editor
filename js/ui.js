@@ -414,12 +414,11 @@
     const chip = $('[data-chat="apikey"]');
     if (!chip) return;
     const a = DE.ai.active();
-    const short = { gemini: 'Gemini', openai: 'OpenAI', anthropic: 'Claude' };
-    chip.querySelector('span').textContent = a ? short[a.provider] : 'API key';
+    chip.querySelector('span').textContent = a ? DE.ai.PROVIDERS[a.provider].short : 'API key';
     const dot = chip.querySelector('.ai-dot');
     dot.classList.toggle('ok', !!a);
     dot.title = a ? `Đang dùng ${a.providerName} – ${a.model}` : 'Chưa có API key';
-    chip.title = a ? `${a.providerName} · ${a.model} · key ${DE.ai.mask(a.key)} – bấm để đổi` : 'Thêm API key của nhà cung cấp AI';
+    chip.title = a ? `${a.providerName} · ${a.model}${a.key ? ` · key ${DE.ai.mask(a.key)}` : ''} – bấm để đổi` : 'Chọn nhà cung cấp AI (có loại miễn phí) và thêm API key';
     renderQuickControls();
   }
 
@@ -428,13 +427,13 @@
     const sel = $('#ai-model-quick'), eff = $('#ai-effort'), think = $('#ai-think');
     if (!sel) return;
     const c = DE.ai.load(), p = c.provider, P = DE.ai.PROVIDERS[p], cur = c.models[p];
-    if (!c.keys[p]) {
-      sel.innerHTML = '<option value="">Mô hình: chưa có API key</option><option value="__settings">⚙ Cài đặt AI…</option>';
+    if (!DE.ai.isConfigured(p, c)) {
+      sel.innerHTML = `<option value="">Mô hình: ${P.baseEditable ? 'chưa cấu hình' : 'chưa có API key'}</option><option value="__settings">⚙ Cài đặt AI…</option>`;
       sel.value = '';
       sel.title = 'Thêm API key để chọn mô hình';
     } else {
       const list = c.lists[p] && c.lists[p].length ? c.lists[p] : P.suggested.map((id) => ({ id, label: id }));
-      let html = `<optgroup label="${esc(P.name)}">` + list.map((m) => `<option value="${esc(m.id)}">${esc(m.id)}</option>`).join('') + '</optgroup>';
+      let html = `<optgroup label="${esc(P.name)}">` + list.map((m) => `<option value="${esc(m.id)}">${m.free ? '🆓 ' : ''}${esc(m.id)}</option>`).join('') + '</optgroup>';
       if (cur && !list.some((m) => m.id === cur)) html = `<option value="${esc(cur)}">${esc(cur)}</option>` + html;
       html += '<option value="__settings">⚙ Đổi nhà cung cấp / tải lại danh sách…</option>';
       sel.innerHTML = html;
@@ -488,8 +487,16 @@
     back.innerHTML =
       `<div class="modal ai-modal" role="dialog" aria-modal="true" aria-labelledby="ai-title">` +
       `<h3 id="ai-title">Cài đặt AI</h3>` +
-      `<label class="f"><span>Nhà cung cấp</span><select id="ai-provider">${Object.entries(P).map(([k, p]) => `<option value="${k}">${esc(p.name)}</option>`).join('')}</select></label>` +
-      `<div class="f"><span>API key <a id="ai-keylink" class="ai-keylink" target="_blank" rel="noopener noreferrer">Lấy API key ↗</a></span><div id="ai-keybox"></div></div>` +
+      `<label class="f"><span>Nhà cung cấp</span><select id="ai-provider">` +
+      DE.ai.GROUPS.map(([g, gl]) => {
+        const items = Object.entries(P).filter(([, p]) => p.group === g);
+        return items.length ? `<optgroup label="${esc(gl)}">${items.map(([k, p]) => `<option value="${k}">${esc(p.name)}</option>`).join('')}</optgroup>` : '';
+      }).join('') +
+      `</select></label>` +
+      `<div id="ai-prov-note" class="msg ai-prov-note"></div>` +
+      `<div class="f" id="ai-base-row" hidden><span>Địa chỉ máy chủ</span><input type="text" id="ai-base" class="ai-base" autocomplete="off" spellcheck="false">` +
+      `<div id="ai-setup" class="ai-setup"></div></div>` +
+      `<div class="f"><span><span id="ai-keylabel">API key</span> <a id="ai-keylink" class="ai-keylink" target="_blank" rel="noopener noreferrer">Lấy API key ↗</a></span><div id="ai-keybox"></div></div>` +
       `<div class="f"><span>Mô hình</span><div class="ai-model-row"><select id="ai-model"></select>` +
       `<button type="button" class="btn ai-refresh" data-r="refresh" title="Tải danh sách mô hình từ tài khoản">⟳</button></div>` +
       `<input type="text" id="ai-model-custom" class="ai-model-custom" placeholder="Nhập tên mô hình, vd: claude-opus-5-5" hidden autocomplete="off" spellcheck="false">` +
@@ -512,7 +519,7 @@
           `<button type="button" class="btn" data-r="changekey">Đổi</button><button type="button" class="btn ai-del" data-r="delkey">Xoá</button></div>`;
       } else {
         keyBox.innerHTML =
-          `<input type="password" id="ai-key-input" class="ai-key-input" autocomplete="off" spellcheck="false" data-lpignore="true" placeholder="Dán API key (${esc(P[prov()].keyHint)})">` +
+          `<input type="password" id="ai-key-input" class="ai-key-input" autocomplete="off" spellcheck="false" data-lpignore="true" placeholder="${esc(P[prov()].keyOptional ? `Không bắt buộc${P[prov()].keyHint && P[prov()].keyHint !== 'không cần' ? ' – ' + P[prov()].keyHint : ''}` : `Dán API key${P[prov()].keyHint ? ` (${P[prov()].keyHint})` : ''}`)}">` +
           `<div id="ai-key-preview" class="msg"></div>`;
         const inp = $$b('#ai-key-input'), pv = $$b('#ai-key-preview');
         let t = 0;
@@ -526,8 +533,29 @@
           keyBox.insertAdjacentHTML('beforeend', `<button type="button" class="btn ai-keep" data-r="keepkey">Giữ key cũ (${esc(DE.ai.mask(saved))})</button>`);
         }
       }
-      $$b('#ai-keylink').href = P[prov()].keyUrl;
+      const link = $$b('#ai-keylink'), PP = P[prov()];
+      link.hidden = !PP.keyUrl;
+      if (PP.keyUrl) link.href = PP.keyUrl;
+      link.textContent = PP.keyLinkText || 'Lấy API key ↗';
+      $$b('#ai-keylabel').textContent = PP.keyOptional ? 'API key (không bắt buộc)' : 'API key';
     }
+
+    /** Ghi chú nhà cung cấp, ô địa chỉ máy chủ và hướng dẫn cài (Ollama, LM Studio, tuỳ chỉnh) */
+    function renderProvider() {
+      const PP = P[prov()];
+      $$b('#ai-prov-note').textContent = PP.note || '';
+      const row = $$b('#ai-base-row');
+      row.hidden = !PP.baseEditable;
+      if (PP.baseEditable) {
+        const inp = $$b('#ai-base');
+        inp.value = (cfg.bases && cfg.bases[prov()]) || PP.base || '';
+        inp.placeholder = PP.base || 'https://máy-chủ/v1';
+        const origin = /^https?:/.test(location.origin) ? location.origin : 'file://*';
+        $$b('#ai-setup').textContent = PP.setup ? PP.setup(origin) : '';
+        $$b('#ai-setup').hidden = !PP.setup;
+      }
+    }
+    const currentBase = () => ($$b('#ai-base-row').hidden ? undefined : $$b('#ai-base').value.trim());
 
     function renderModels(list, fromApi) {
       const want = cfg.models[prov()] || '';
@@ -542,17 +570,32 @@
       customIn.hidden = modelSel.value !== '__custom';
     }
 
+    const loadedMsg = (PP, list, key) => {
+      const free = list.filter((m) => m.free).length;
+      return (
+        `Đã tải ${list.length} mô hình ${PP.local ? 'từ ' + PP.short : PP.baseEditable ? 'từ máy chủ' : !key && PP.listNeedsKey === false ? '(danh sách công khai)' : 'từ tài khoản'}.` +
+        (free ? ` Có ${free} mô hình miễn phí (🆓) – xếp đầu danh sách.` : '')
+      );
+    };
     async function loadModels() {
-      const p = prov(), key = currentKey();
-      if (!key) {
-        renderModels(P[p].suggested.map((id) => ({ id, label: id })), false);
+      const p = prov(), key = currentKey(), PP = P[p], base = currentBase();
+      const suggest = () => renderModels(PP.suggested.map((id) => ({ id, label: id })), false);
+      if (!key && !PP.keyOptional && PP.listNeedsKey !== false) {
+        suggest();
         status.textContent = 'Nhập API key để tải danh sách mô hình mới nhất của tài khoản.';
         status.className = 'msg';
         return;
       }
-      if (modelCache[p + key]) {
-        renderModels(modelCache[p + key], true);
-        status.textContent = `Đã tải ${modelCache[p + key].length} mô hình từ tài khoản.`;
+      if (PP.baseEditable && !DE.ai.baseOf(p, cfg, base)) {
+        suggest();
+        status.textContent = 'Nhập địa chỉ máy chủ để tải danh sách mô hình.';
+        status.className = 'msg';
+        return;
+      }
+      const ck = p + '|' + key + '|' + (base || '');
+      if (modelCache[ck]) {
+        renderModels(modelCache[ck], true);
+        status.textContent = loadedMsg(PP, modelCache[ck], key);
         status.className = 'msg ok';
         return;
       }
@@ -560,12 +603,12 @@
       status.textContent = 'Đang tải danh sách mô hình…';
       status.className = 'msg';
       try {
-        const list = await DE.ai.listModels(p, key);
+        const list = await DE.ai.listModels(p, key, base);
         if (my !== loadSeq || p !== prov()) return;
-        if (!list.length) throw new Error('Tài khoản không có mô hình phù hợp');
-        modelCache[p + key] = list;
+        if (!list.length) throw new Error(PP.local ? `${PP.short} chưa có mô hình nào – tải một mô hình trước (xem hướng dẫn ở trên).` : 'Không có mô hình phù hợp');
+        modelCache[ck] = list;
         renderModels(list, true);
-        status.textContent = `Đã tải ${list.length} mô hình từ tài khoản.`;
+        status.textContent = loadedMsg(PP, list, key);
         status.className = 'msg ok';
       } catch (e) {
         if (my !== loadSeq || p !== prov()) return;
@@ -593,9 +636,14 @@
       const p = prov();
       const key = currentKey();
       const model = modelSel.value === '__custom' ? customIn.value.trim() : modelSel.value;
-      if (!key) {
+      if (!key && !P[p].keyOptional) {
         UI.toast('Hãy nhập API key', 'warn');
         ($$b('#ai-key-input') || provSel).focus();
+        return;
+      }
+      if (P[p].baseEditable && !DE.ai.baseOf(p, cfg, currentBase())) {
+        UI.toast('Hãy nhập địa chỉ máy chủ', 'warn');
+        $$b('#ai-base').focus();
         return;
       }
       if (!model) {
@@ -606,18 +654,26 @@
       // đọc lại cấu hình mới nhất (danh sách mô hình vừa tải, effort, thinking…) rồi mới ghi
       Object.assign(cfg, DE.ai.load());
       cfg.provider = p;
-      cfg.keys[p] = key;
+      if (key) cfg.keys[p] = key;
+      else delete cfg.keys[p];
+      if (P[p].baseEditable) cfg.bases[p] = currentBase();
       cfg.models[p] = model;
       if (!DE.ai.save(cfg)) return UI.toast('Không lưu được cấu hình (trình duyệt chặn bộ nhớ)', 'error');
       updateApiChip();
       close();
-      UI.toast(`Đã lưu: ${P[p].name} · ${model} · key ${DE.ai.mask(key)}`, 'ok');
+      UI.toast(`Đã lưu: ${P[p].name} · ${model}${key ? ` · key ${DE.ai.mask(key)}` : ''}`, 'ok');
     }
 
     provSel.addEventListener('change', () => {
       editingKey = false;
+      renderProvider();
       renderKeyBox();
       loadModels();
+    });
+    let baseT = 0;
+    $$b('#ai-base').addEventListener('input', () => {
+      clearTimeout(baseT);
+      baseT = setTimeout(loadModels, 700);
     });
     modelSel.addEventListener('change', () => {
       customIn.hidden = modelSel.value !== '__custom';
@@ -659,6 +715,7 @@
     window.addEventListener('keydown', onKey, true);
     document.body.appendChild(back);
     provSel.value = cfg.provider;
+    renderProvider();
     renderKeyBox();
     loadModels();
     ($$b('#ai-key-input') || provSel).focus();

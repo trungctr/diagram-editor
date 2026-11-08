@@ -92,11 +92,43 @@ JSON và app **áp dụng ngay**.
 
 Bấm chip **API key** (hoặc chọn “⚙ Đổi nhà cung cấp…” trong dropdown mô hình):
 
-1. Chọn nhà cung cấp: **Google Gemini**, **OpenAI** hoặc **Anthropic Claude** (có link “Lấy API key ↗”).
-2. Dán API key – luôn hiển thị dạng che bớt, ví dụ `AIza••••••WXYZ`; key đã lưu có nút Đổi / Xoá.
-3. Chọn mô hình – danh sách **tải trực tiếp từ tài khoản** bằng key (đúng quyền của tài khoản), có gợi ý
+1. Chọn nhà cung cấp (bảng dưới; có link “Lấy API key ↗” / “Tải … ↗”).
+2. Dán API key – luôn hiển thị dạng che bớt, ví dụ `AIza••••••WXYZ`; key đã lưu có nút Đổi / Xoá. Nhà cung cấp
+   chạy trên máy / tuỳ chỉnh thì key không bắt buộc, thay vào đó nhập **địa chỉ máy chủ**.
+3. Chọn mô hình – danh sách **tải trực tiếp từ tài khoản / máy chủ** (đúng quyền của tài khoản), có gợi ý
    dự phòng và “Khác…” để tự nhập tên.
 4. **Áp dụng**.
+
+| Nhóm | Nhà cung cấp | Ghi chú |
+| --- | --- | --- |
+| Có gói miễn phí | **Google Gemini** | Gói miễn phí của Google AI Studio (giới hạn lượt). |
+| | **OpenRouter** | Mô hình 🆓 (đuôi `:free`) xếp đầu danh sách; `openrouter/free` tự chọn một mô hình miễn phí. Key miễn phí, giới hạn lượt / ngày. Danh sách tải được cả khi chưa có key. |
+| | **Groq** · **Cerebras** | Gói miễn phí có giới hạn lượt / token, trả lời rất nhanh. |
+| | **Mistral AI** | Gói “Experiment” miễn phí (xác minh số điện thoại). |
+| | **Hugging Face** | Một ít credit miễn phí mỗi tháng cho Inference Providers. |
+| Chạy trên máy – miễn phí | **Ollama** | Mặc định `http://localhost:11434`. Dùng API gốc `/api/chat` và tự đặt `num_ctx` đủ dài cho skill (~10k token) – mặc định của Ollama quá ngắn sẽ cắt mất skill. |
+| | **LM Studio** | Mặc định `http://localhost:1234/v1`; bật “Enable CORS”, đặt Context Length ≥ 16384 khi nạp mô hình. |
+| Trả phí | **OpenAI** · **Anthropic Claude** | |
+| Khác | **Tuỳ chỉnh** | Máy chủ bất kỳ có API kiểu OpenAI (`/v1/chat/completions`, `/v1/models`): vLLM, llama.cpp server, Jan, LocalAI, LiteLLM, DeepSeek, Together… |
+
+Mọi nhà cung cấp đều được gọi **thẳng từ trình duyệt**, nên máy chủ phải cho phép CORS (các dịch vụ trong bảng đã
+kiểm tra; GitHub Models, NVIDIA NIM, SambaNova hiện không cho phép nên không có trong danh sách). Mô hình mở chèn
+phần suy luận `<think>…</think>` vào câu trả lời thì app tự bỏ trước khi đọc JSON.
+
+**Ollama trên trang web**: Ollama chỉ cho phép `localhost` gọi tới. Đặt biến môi trường rồi thoát hẳn và mở lại
+Ollama (form Cài đặt AI hiện sẵn lệnh với đúng địa chỉ trang):
+
+```text
+Windows:  setx OLLAMA_ORIGINS "https://diagrams.trungctr.com"
+macOS:    launchctl setenv OLLAMA_ORIGINS "https://diagrams.trungctr.com"
+Linux:    systemctl edit ollama  →  [Service] Environment="OLLAMA_ORIGINS=https://diagrams.trungctr.com"
+```
+
+Chrome / Edge có thể hỏi quyền truy cập thiết bị trong mạng cục bộ – chọn Cho phép. Safari chặn trang `https`
+gọi tới `http://localhost`, nên dùng Chrome / Edge / Firefox.
+
+> **Cline** không phải nhà cung cấp mô hình mà là tiện ích lập trình cho VS Code; các mô hình miễn phí trong
+> Cline đến từ OpenRouter và các nhà cung cấp ở trên – chọn **OpenRouter** để dùng cùng các mô hình đó.
 
 > 🔒 Key chỉ lưu trong `localStorage` của trình duyệt này (riêng cho từng nhà cung cấp) và chỉ được gửi thẳng
 > tới nhà cung cấp đã chọn – không qua máy chủ trung gian. Không nên lưu key trên máy dùng chung.
@@ -114,6 +146,8 @@ Mỗi nhà cung cấp nhận tham số khác nhau; app chuyển đổi như sau:
 | Anthropic Claude | `output_config.effort` (`low` … `max`); thinking bật = `{ type: "adaptive" }` | Opus 5.5 / Fable / Mythos: **không tắt được** (nút khoá). Sonnet 5.5: `{ type: "between_tools" }`. Opus 5 / Haiku 5.5: `{ type: "disabled" }`. Ba mô hình này khi tắt thinking chỉ nhận effort tối đa `high` – app tự hạ và báo. |
 | OpenAI | `reasoning_effort` (`low` / `medium` / `high`; rất cao / tối đa → `xhigh`, lùi về `high` nếu không hỗ trợ) | `reasoning_effort: "none"`, lùi về `"minimal"` |
 | Google Gemini | `thinkingConfig.thinkingLevel` (Gemini 3.x), lùi về `thinkingBudget` (Gemini 2.5) | `thinkingLevel: "minimal"`, lùi về `thinkingBudget: 0` |
+| API kiểu OpenAI (OpenRouter, Groq, Cerebras, Mistral, Hugging Face, LM Studio, tuỳ chỉnh) | `reasoning_effort` như OpenAI, lùi về mặc định nếu máy chủ không nhận | `reasoning_effort: "none"`, lùi về mặc định |
+| Ollama | `think: "low" / "medium" / "high"`, lùi về `true` rồi mặc định | `think: false`, lùi về mặc định (mô hình không hỗ trợ thinking) |
 
 Nếu mô hình trả lỗi 400 vì không hiểu tham số, app tự thử phương án kế tiếp (cuối cùng là mặc định của mô hình)
 và **ghi chú rõ** trong khung chat cấu hình nào đã thực sự được dùng.
