@@ -46,6 +46,10 @@ Hoặc chạy qua web server tĩnh bất kỳ, ví dụ: `npx serve .` hay `pyth
   Khi phát hành bản mới có thêm/bớt file, cập nhật `PRECACHE` và tăng `VERSION` trong `sw.js`.
 - **Chat AI** *(đang phát triển)*: khung chat nổi ở góc dưới phải canvas (API key, Copy context, giọng nói,
   gửi bằng `Ctrl+Enter`), thu nhỏ được thành nút “Chat AI”.
+  - **API key** (đã hoạt động): chọn nhà cung cấp (Google Gemini / OpenAI / Anthropic Claude), nhập key (luôn
+    hiển thị dạng che bớt `AIza••••••WXYZ`), chọn mô hình – danh sách tải trực tiếp từ tài khoản bằng key,
+    có gợi ý và “Khác…” để tự nhập. Key lưu riêng cho từng nhà cung cấp trong `localStorage` của trình duyệt,
+    chỉ gửi thẳng tới nhà cung cấp. Cấu hình đọc qua `DE.ai.active()` (`js/ai.js`).
   - **Copy context = skill prompt** (đã hoạt động): sinh một đoạn prompt dạy AI bên ngoài (Gemini, ChatGPT,
     Claude…) định dạng JSON của app – danh sách type, kích thước mặc định, quy tắc hợp lệ, quy tắc bố cục từng
     mode, ví dụ mẫu; tuỳ chọn kèm diagram hiện tại để AI sửa tiếp. Sao chép hoặc tải `.md`. Dán skill vào AI,

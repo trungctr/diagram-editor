@@ -120,7 +120,7 @@
   // Hiện mới có giao diện. Phần kết nối AI sẽ gắn vào các hàm CHAT_ACTIONS bên dưới.
   const CHAT_KEY = 'diagram-editor:chat-min';
   const CHAT_ACTIONS = {
-    apikey: () => UI.toast('Thêm API key: tính năng đang được phát triển', 'info'),
+    apikey: () => apiKeyDialog(),
     context: () => skillDialog(),
     mic: () => UI.toast('Nhập bằng giọng nói: tính năng đang được phát triển', 'info'),
     send: (text) => UI.toast(`Chat AI đang được phát triển – chưa gửi được: “${text.slice(0, 60)}${text.length > 60 ? '…' : ''}”`, 'info'),
@@ -217,6 +217,199 @@
     copyBtn.focus();
   }
 
+  // ------------------------------------------------------ cài đặt API key
+  /** Cập nhật chip "API key" trên khung chat theo cấu hình đang dùng */
+  function updateApiChip() {
+    const chip = $('[data-chat="apikey"]');
+    if (!chip) return;
+    const a = DE.ai.active();
+    const short = { gemini: 'Gemini', openai: 'OpenAI', anthropic: 'Claude' };
+    chip.querySelector('span').textContent = a ? `API key · ${short[a.provider]}` : 'API key';
+    const dot = chip.querySelector('.ai-dot');
+    dot.classList.toggle('ok', !!a);
+    dot.title = a ? `Đang dùng ${a.providerName} – ${a.model}` : 'Chưa có API key';
+    chip.title = a ? `${a.providerName} · ${a.model} · key ${DE.ai.mask(a.key)} – bấm để đổi` : 'Thêm API key của nhà cung cấp AI';
+  }
+
+  function apiKeyDialog() {
+    const cfg = DE.ai.load();
+    const P = DE.ai.PROVIDERS;
+    const modelCache = {}; // provider -> [{id,label}] đã tải từ API
+    let editingKey = false; // đang nhập key mới thay cho key đã lưu
+    let loadSeq = 0;
+    const back = document.createElement('div');
+    back.className = 'modal-backdrop';
+    back.innerHTML =
+      `<div class="modal ai-modal" role="dialog" aria-modal="true" aria-labelledby="ai-title">` +
+      `<h3 id="ai-title">Cài đặt AI</h3>` +
+      `<label class="f"><span>Nhà cung cấp</span><select id="ai-provider">${Object.entries(P).map(([k, p]) => `<option value="${k}">${esc(p.name)}</option>`).join('')}</select></label>` +
+      `<div class="f"><span>API key <a id="ai-keylink" class="ai-keylink" target="_blank" rel="noopener noreferrer">Lấy API key ↗</a></span><div id="ai-keybox"></div></div>` +
+      `<div class="f"><span>Mô hình</span><div class="ai-model-row"><select id="ai-model"></select>` +
+      `<button type="button" class="btn ai-refresh" data-r="refresh" title="Tải danh sách mô hình từ tài khoản">⟳</button></div>` +
+      `<input type="text" id="ai-model-custom" class="ai-model-custom" placeholder="Nhập tên mô hình, vd: claude-opus-5-5" hidden autocomplete="off" spellcheck="false">` +
+      `<div id="ai-model-status" class="msg"></div></div>` +
+      `<p class="hint ai-privacy">🔒 API key chỉ lưu trong trình duyệt này và chỉ được gửi trực tiếp tới nhà cung cấp đã chọn. Không nên lưu key trên máy dùng chung.</p>` +
+      `<div class="modal-actions"><button class="btn" data-r="cancel">Huỷ</button><button class="btn primary" data-r="apply">Áp dụng</button></div></div>`;
+    const $$b = (q) => back.querySelector(q);
+    const provSel = $$b('#ai-provider'), keyBox = $$b('#ai-keybox'), modelSel = $$b('#ai-model');
+    const customIn = $$b('#ai-model-custom'), status = $$b('#ai-model-status');
+    const prov = () => provSel.value;
+    const typedKey = () => ($$b('#ai-key-input') ? $$b('#ai-key-input').value.trim() : '');
+    const currentKey = () => (editingKey || !cfg.keys[prov()] ? typedKey() : cfg.keys[prov()]);
+
+    function renderKeyBox() {
+      const saved = cfg.keys[prov()];
+      if (saved && !editingKey) {
+        keyBox.innerHTML =
+          `<div class="ai-keysaved"><span class="ai-keymask" title="Key đã lưu (đã che bớt)">🔑 ${esc(DE.ai.mask(saved))}</span>` +
+          `<button type="button" class="btn" data-r="changekey">Đổi</button><button type="button" class="btn ai-del" data-r="delkey">Xoá</button></div>`;
+      } else {
+        keyBox.innerHTML =
+          `<input type="password" id="ai-key-input" class="ai-key-input" autocomplete="off" spellcheck="false" data-lpignore="true" placeholder="Dán API key (${esc(P[prov()].keyHint)})">` +
+          `<div id="ai-key-preview" class="msg"></div>`;
+        const inp = $$b('#ai-key-input'), pv = $$b('#ai-key-preview');
+        let t = 0;
+        inp.addEventListener('input', () => {
+          const v = inp.value.trim();
+          pv.textContent = v ? `Sẽ lưu: ${DE.ai.mask(v)}` : '';
+          clearTimeout(t);
+          if (v.length >= 20) t = setTimeout(() => loadModels(), 600);
+        });
+        if (saved) {
+          keyBox.insertAdjacentHTML('beforeend', `<button type="button" class="btn ai-keep" data-r="keepkey">Giữ key cũ (${esc(DE.ai.mask(saved))})</button>`);
+        }
+      }
+      $$b('#ai-keylink').href = P[prov()].keyUrl;
+    }
+
+    function renderModels(list, fromApi) {
+      const want = cfg.models[prov()] || '';
+      const ids = list.map((m) => m.id);
+      const groupLabel = fromApi ? `Mô hình của tài khoản (${list.length})` : 'Gợi ý (chưa tải từ tài khoản)';
+      let html = `<optgroup label="${esc(groupLabel)}">` + list.map((m) => `<option value="${esc(m.id)}">${esc(m.label === m.id ? m.id : `${m.label} – ${m.id}`)}</option>`).join('') + '</optgroup>';
+      if (want && !ids.includes(want)) html = `<optgroup label="Đang dùng"><option value="${esc(want)}">${esc(want)}</option></optgroup>` + html;
+      html += `<option value="__custom">Khác… (nhập tên mô hình)</option>`;
+      modelSel.innerHTML = html;
+      modelSel.value = want && (ids.includes(want) || want) ? want : list[0] ? list[0].id : '__custom';
+      if (!modelSel.value) modelSel.value = '__custom';
+      customIn.hidden = modelSel.value !== '__custom';
+    }
+
+    async function loadModels() {
+      const p = prov(), key = currentKey();
+      if (!key) {
+        renderModels(P[p].suggested.map((id) => ({ id, label: id })), false);
+        status.textContent = 'Nhập API key để tải danh sách mô hình mới nhất của tài khoản.';
+        status.className = 'msg';
+        return;
+      }
+      if (modelCache[p + key]) {
+        renderModels(modelCache[p + key], true);
+        status.textContent = `Đã tải ${modelCache[p + key].length} mô hình từ tài khoản.`;
+        status.className = 'msg ok';
+        return;
+      }
+      const my = ++loadSeq;
+      status.textContent = 'Đang tải danh sách mô hình…';
+      status.className = 'msg';
+      try {
+        const list = await DE.ai.listModels(p, key);
+        if (my !== loadSeq || p !== prov()) return;
+        if (!list.length) throw new Error('Tài khoản không có mô hình phù hợp');
+        modelCache[p + key] = list;
+        renderModels(list, true);
+        status.textContent = `Đã tải ${list.length} mô hình từ tài khoản.`;
+        status.className = 'msg ok';
+      } catch (e) {
+        if (my !== loadSeq || p !== prov()) return;
+        renderModels(P[p].suggested.map((id) => ({ id, label: id })), false);
+        status.textContent = (e instanceof TypeError ? 'Không kết nối được tới nhà cung cấp (mạng hoặc trình duyệt chặn).' : e.message) + ' Vẫn có thể chọn gợi ý hoặc nhập tên mô hình.';
+        status.className = 'msg err';
+      }
+    }
+
+    const close = () => {
+      window.removeEventListener('keydown', onKey, true);
+      back.remove();
+    };
+    const onKey = (e) => {
+      e.stopPropagation(); // chặn phím tắt của editor khi đang mở form
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        close();
+      } else if (e.key === 'Enter' && back.contains(e.target) && e.target.matches('input')) {
+        e.preventDefault();
+        apply();
+      }
+    };
+    function apply() {
+      const p = prov();
+      const key = currentKey();
+      const model = modelSel.value === '__custom' ? customIn.value.trim() : modelSel.value;
+      if (!key) {
+        UI.toast('Hãy nhập API key', 'warn');
+        ($$b('#ai-key-input') || provSel).focus();
+        return;
+      }
+      if (!model) {
+        UI.toast('Hãy chọn hoặc nhập tên mô hình', 'warn');
+        (customIn.hidden ? modelSel : customIn).focus();
+        return;
+      }
+      cfg.provider = p;
+      cfg.keys[p] = key;
+      cfg.models[p] = model;
+      if (!DE.ai.save(cfg)) return UI.toast('Không lưu được cấu hình (trình duyệt chặn bộ nhớ)', 'error');
+      updateApiChip();
+      close();
+      UI.toast(`Đã lưu: ${P[p].name} · ${model} · key ${DE.ai.mask(key)}`, 'ok');
+    }
+
+    provSel.addEventListener('change', () => {
+      editingKey = false;
+      renderKeyBox();
+      loadModels();
+    });
+    modelSel.addEventListener('change', () => {
+      customIn.hidden = modelSel.value !== '__custom';
+      if (!customIn.hidden) customIn.focus();
+    });
+    back.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-r]');
+      if ((b && b.dataset.r === 'cancel') || e.target === back) return close();
+      if (!b) return;
+      const r = b.dataset.r;
+      if (r === 'apply') apply();
+      else if (r === 'refresh') {
+        Object.keys(modelCache).forEach((k) => k.startsWith(prov()) && delete modelCache[k]);
+        loadModels();
+      } else if (r === 'changekey') {
+        editingKey = true;
+        renderKeyBox();
+        $$b('#ai-key-input').focus();
+      } else if (r === 'keepkey') {
+        editingKey = false;
+        renderKeyBox();
+        loadModels();
+      } else if (r === 'delkey') {
+        delete cfg.keys[prov()];
+        delete cfg.models[prov()];
+        DE.ai.save(cfg);
+        updateApiChip();
+        editingKey = false;
+        renderKeyBox();
+        loadModels();
+        UI.toast(`Đã xoá API key của ${P[prov()].name}`, 'info');
+      }
+    });
+    window.addEventListener('keydown', onKey, true);
+    document.body.appendChild(back);
+    provSel.value = cfg.provider;
+    renderKeyBox();
+    loadModels();
+    ($$b('#ai-key-input') || provSel).focus();
+  }
+
   function initChat() {
     const box = $('#ai-chat'), pill = $('#ai-chat-pill'), ta = $('#ai-prompt'), send = $('[data-chat="send"]', box);
     const autosize = () => {
@@ -266,6 +459,7 @@
     }
     setMin(min);
     autosize();
+    updateApiChip();
   }
 
   function initTheme() {

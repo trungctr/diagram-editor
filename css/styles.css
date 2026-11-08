@@ -770,3 +770,38 @@ button.help-thumb:hover { border-color: var(--accent); background: var(--accent-
   #app { --left-open: 210px; --right-open: 270px; }
   .pal-grid { grid-template-columns: repeat(2, 1fr); }
 }
+
+/* ------------------------------------------------------- cài đặt AI */
+.ai-modal { width: min(480px, 100%); }
+.ai-modal .f { margin-bottom: 12px; }
+.ai-modal .f > span { display: flex; justify-content: space-between; align-items: center; }
+.ai-keylink { font-size: 11px; color: var(--accent); text-decoration: none; }
+.ai-keylink:hover { text-decoration: underline; }
+.ai-keysaved { display: flex; align-items: center; gap: 6px; }
+.ai-keymask {
+  flex: 1;
+  min-width: 0;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--code-bg);
+  font-family: Consolas, "Cascadia Code", Menlo, monospace;
+  font-size: 12.5px;
+  letter-spacing: .03em;
+  color: var(--text-2);
+  overflow: hidden;
+  white-space: nowrap;
+}
+.ai-del:hover { color: var(--err); border-color: var(--err); }
+.ai-key-input { font-family: Consolas, "Cascadia Code", Menlo, monospace; }
+.ai-keep { margin-top: 6px; font-size: 11.5px; height: 26px; }
+#ai-key-preview { margin-top: 4px; font-family: Consolas, "Cascadia Code", Menlo, monospace; }
+.ai-model-row { display: flex; gap: 6px; }
+.ai-model-row select { flex: 1; min-width: 0; }
+.ai-refresh { width: 34px; padding: 0; font-size: 15px; }
+.ai-model-custom { margin-top: 6px; }
+#ai-model-status { margin-top: 4px; }
+.ai-privacy { margin: 4px 0 14px; }
