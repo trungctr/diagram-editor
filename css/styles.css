@@ -88,8 +88,12 @@ button, select, input, textarea { font: inherit; color: inherit; }
 
 #app {
   display: grid;
-  grid-template-columns: 252px 1fr 310px;
+  /* --left-open / --right-open: độ rộng khi mở; --left-w / --right-w = 0 khi thu gọn */
+  --left-open: 252px;
+  --right-open: 310px;
+  grid-template-columns: var(--left-w, var(--left-open)) minmax(0, 1fr) var(--right-w, var(--right-open));
   grid-template-rows: 48px 1fr 26px;
+  transition: grid-template-columns .22s ease;
   grid-template-areas: "tb tb tb" "pal stage insp" "st st st";
   height: 100vh;
 }
@@ -513,6 +517,47 @@ textarea.code {
 .embed-note { margin: 4px 0 12px; }
 @media (max-width: 640px) { .embed-opts { grid-template-columns: 1fr; } }
 
+/* ------------------------------------------------- thu gọn panel trái / phải */
+#app.no-anim { transition: none; }
+#app.left-collapsed { --left-w: 0px; }
+#app.right-collapsed { --right-w: 0px; }
+#palette, #inspector { min-width: 0; overflow: hidden; }
+/* nội dung giữ nguyên bề rộng khi mở -> lúc trượt chỉ bị cắt, không bị bóp méo */
+#palette > * { width: var(--left-open); flex-shrink: 0; }
+#inspector > * { width: var(--right-open); }
+#app.left-collapsed #palette { border-right-color: transparent; }
+#app.right-collapsed #inspector { border-left-color: transparent; }
+
+.panel-toggle {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 6;
+  width: 16px;
+  height: 56px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--muted);
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, .12);
+  transition: width .15s, color .15s, background-color .15s;
+}
+.panel-toggle.left { left: 0; border-left: 0; border-radius: 0 8px 8px 0; }
+.panel-toggle.right { right: 0; border-right: 0; border-radius: 8px 0 0 8px; }
+.panel-toggle:hover { width: 20px; color: var(--accent); }
+.panel-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.panel-toggle svg { transition: transform .2s; }
+.panel-toggle[aria-expanded="false"] svg { transform: rotate(180deg); }
+/* đang thu gọn: tô màu nổi bật để người dùng biết chỗ mở lại */
+.panel-toggle[aria-expanded="false"] { background: var(--accent); border-color: var(--accent); color: #fff; width: 18px; }
+@media (prefers-reduced-motion: reduce) {
+  #app, .panel-toggle, .panel-toggle svg { transition: none; }
+}
+
 /* --------------------------------------------------------------- modes */
 .mode-switch {
   display: flex;
@@ -606,6 +651,6 @@ button.help-thumb:hover { border-color: var(--accent); background: var(--accent-
 }
 
 @media (max-width: 1100px) {
-  #app { grid-template-columns: 210px 1fr 270px; }
+  #app { --left-open: 210px; --right-open: 270px; }
   .pal-grid { grid-template-columns: repeat(2, 1fr); }
 }

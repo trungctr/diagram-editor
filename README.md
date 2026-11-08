@@ -44,6 +44,9 @@ Hoặc chạy qua web server tĩnh bất kỳ, ví dụ: `npx serve .` hay `pyth
   chạy offline nhờ service worker (`sw.js`, network-first), mở file `.json` trực tiếp từ hệ điều hành khi đã cài
   (`file_handlers`). Icon trong `icons/` (SVG gốc + PNG 192/512, maskable, apple-touch-icon).
   Khi phát hành bản mới có thêm/bớt file, cập nhật `PRECACHE` và tăng `VERSION` trong `sw.js`.
+- **Thu gọn panel**: nút ‹ › ở mép trái / phải canvas (hoặc `Ctrl+B` cho thư viện, `Ctrl+Alt+B` cho bảng thuộc
+  tính) để có thêm chỗ vẽ trên màn hình nhỏ. Mặc định hiện cả hai; lựa chọn được ghi nhớ, diagram đứng yên khi
+  panel co giãn.
 - **Chế độ tối** (nút mặt trăng / mặt trời): chỉ làm tối giao diện; nền whiteboard không đen mà chỉ giảm độ
   trắng cho đỡ chói, các hình giữ nguyên màu, file xuất ra vẫn nền trắng. Mặc định theo hệ điều hành, lựa chọn
   được ghi nhớ.
@@ -74,6 +77,7 @@ Hoặc chạy qua web server tĩnh bất kỳ, ví dụ: `npx serve .` hay `pyth
 | Dịch chuyển | Phím mũi tên (`Shift`: theo bước lưới) |
 | Thứ tự lớp | `Ctrl+]` lên trên cùng, `Ctrl+[` xuống dưới cùng |
 | Lưu / Mở | `Ctrl+S` / `Ctrl+O` |
+| Thu gọn / mở panel | `Ctrl+B` (thư viện) / `Ctrl+Alt+B` (thuộc tính) |
 
 ## Cấu trúc JSON
 

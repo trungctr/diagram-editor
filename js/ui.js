@@ -54,6 +54,68 @@
     const meta = document.querySelector('meta[name="theme-color"]:not([media])');
     if (meta) meta.content = t === 'dark' ? '#161b22' : '#ffffff';
   };
+  // ================================================================= PANELS
+  const PANEL_KEY = 'diagram-editor:panels';
+  const PANELS = {
+    left: { cls: 'left-collapsed', el: '#palette', btn: '#toggle-left', show: 'Mở thư viện hình (Ctrl+B)', hide: 'Thu gọn thư viện hình (Ctrl+B)' },
+    right: { cls: 'right-collapsed', el: '#inspector', btn: '#toggle-right', show: 'Mở bảng thuộc tính (Ctrl+Alt+B)', hide: 'Thu gọn bảng thuộc tính (Ctrl+Alt+B)' },
+  };
+  const panelState = { left: false, right: false }; // true = đang thu gọn
+
+  function applyPanel(side) {
+    const p = PANELS[side], collapsed = panelState[side];
+    $('#app').classList.toggle(p.cls, collapsed);
+    const el = $(p.el);
+    el.inert = collapsed; // không cho Tab / trình đọc màn hình đi vào panel đang ẩn
+    el.setAttribute('aria-hidden', String(collapsed));
+    const btn = $(p.btn);
+    btn.setAttribute('aria-expanded', String(!collapsed));
+    btn.title = collapsed ? p.show : p.hide;
+  }
+
+  /** Thu gọn / mở panel. side: 'left' | 'right'; collapsed: true/false (bỏ trống = đảo trạng thái) */
+  UI.togglePanel = function (side, collapsed) {
+    if (!PANELS[side]) return;
+    E.commitText && E.commitText();
+    panelState[side] = collapsed === undefined ? !panelState[side] : !!collapsed;
+    applyPanel(side);
+    try {
+      localStorage.setItem(PANEL_KEY, JSON.stringify(panelState));
+    } catch (_) {
+      /* ignore */
+    }
+  };
+
+  function initPanels() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(PANEL_KEY) || 'null');
+      if (saved) Object.assign(panelState, { left: !!saved.left, right: !!saved.right });
+    } catch (_) {
+      /* mặc định: cả hai panel đều hiện */
+    }
+    const app = $('#app');
+    app.classList.add('no-anim'); // áp trạng thái đã lưu ngay, không chạy hiệu ứng lúc mở trang
+    applyPanel('left');
+    applyPanel('right');
+    requestAnimationFrame(() => requestAnimationFrame(() => app.classList.remove('no-anim')));
+    $('#toggle-left').addEventListener('click', (e) => {
+      UI.togglePanel('left');
+      e.currentTarget.blur();
+    });
+    $('#toggle-right').addEventListener('click', (e) => {
+      UI.togglePanel('right');
+      e.currentTarget.blur();
+    });
+    // Panel trái co giãn làm mép trái canvas dịch chuyển -> bù lại để diagram đứng yên trên màn hình
+    const stage = $('#stage');
+    let lastLeft = stage.getBoundingClientRect().left;
+    new ResizeObserver(() => {
+      const left = stage.getBoundingClientRect().left;
+      if (left !== lastLeft) E.panBy(lastLeft - left);
+      lastLeft = left;
+    }).observe(stage);
+  }
+
   function initTheme() {
     UI.setTheme(currentTheme(), false);
     // theo hệ điều hành nếu người dùng chưa tự chọn
@@ -270,6 +332,7 @@
       el.insertAdjacentHTML('afterbegin', icon(el.dataset.icon));
     });
     initTheme();
+    initPanels();
     initToolbar();
     initPalette();
     initInspector();
@@ -721,6 +784,7 @@
         ['Thứ tự lớp', 'Ctrl+] lên trên cùng · Ctrl+[ xuống dưới cùng'],
         ['Dịch chuyển', 'Phím mũi tên (Shift: theo lưới)'],
         ['Vừa màn hình', 'Shift+1'],
+        ['Thu gọn / mở panel', 'Nút ‹ › ở mép trái / phải canvas, hoặc Ctrl+B (thư viện) · Ctrl+Alt+B (thuộc tính)'],
       ]
         .map(([a, b]) => `<tr data-search="${esc((a + ' ' + b).toLowerCase())}"><td>${a}</td><td>${b}</td></tr>`)
         .join('') +

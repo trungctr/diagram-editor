@@ -704,6 +704,14 @@
     zoomAt(r.width / 2, r.height / 2, k);
   };
   E.zoomTo = (z) => E.zoomBy(z / view.z);
+  /** Dịch khung nhìn theo pixel màn hình (dùng để giữ diagram đứng yên khi panel co giãn) */
+  E.panBy = (dx, dy = 0) => {
+    if (!dx && !dy) return;
+    view.x += dx;
+    view.y += dy;
+    invalidate(false);
+    emit('view');
+  };
   E.fit = () => {
     const r = svg.getBoundingClientRect();
     const b = DE.docBounds(store.doc);
@@ -1036,6 +1044,12 @@
         updateCursor();
         invalidate(false);
       }
+      ev.preventDefault();
+      return;
+    }
+    if (mod && ev.code === 'KeyB') {
+      // Ctrl+B: panel trái (thư viện) · Ctrl+Alt+B: panel phải (thuộc tính) – giống VS Code
+      DE.ui && DE.ui.togglePanel(ev.altKey ? 'right' : 'left');
       ev.preventDefault();
       return;
     }
