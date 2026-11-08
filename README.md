@@ -184,6 +184,19 @@ Chuột phải vào 🎤 (hoặc nút “🎙 Giọng nói…” trong Cài đ�
 
 “Tự động” chọn Web Speech nếu có, không thì hỏi tải bộ offline.
 
+### Chọn micro
+
+Trong Cài đặt giọng nói, mục **Micro** liệt kê các micro trên máy (mặc định: micro mặc định của hệ thống). Nút
+**Thử micro** hiện thanh âm lượng: nói vài câu, thanh xanh nhảy theo giọng là đúng micro. Bộ offline luôn dùng micro
+đã chọn; Web Speech dùng micro đã chọn trên Chrome / Edge bản mới (`start(audioTrack)`), bản cũ luôn dùng micro
+mặc định của trình duyệt.
+
+Khi nghe xong mà không có chữ nào, app tự chẩn đoán:
+
+- Micro **có tiếng** nhưng trình duyệt không trả chữ → dịch vụ nhận dạng của trình duyệt không hoạt động (hay gặp
+  ở Cốc Cốc, Brave, Opera, hoặc mạng chặn) → app đề nghị **chuyển sang bộ Offline**.
+- Micro **im lặng hoàn toàn** → báo micro đó không thu được âm thanh, chọn micro khác.
+
 ### Giọng đọc
 
 Dùng `speechSynthesis` của trình duyệt. Máy chưa có giọng tiếng Việt thì phản hồi hiện thành chữ; cài thêm ở

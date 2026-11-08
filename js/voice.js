@@ -21,7 +21,7 @@
   const SILENCE_MS = 1200; // im lặng bao lâu thì coi như nói xong
   const NO_SPEECH_MS = 8000; // không nghe thấy gì sau ngần này thì dừng
   const HANDSFREE_IDLE_MS = 90000; // rảnh tay: im lặng quá lâu thì tự tắt
-  const DEFAULTS = { engine: 'auto', lang: 'vi-VN', commands: true, speak: true, persona: 'em-anh', voice: '' };
+  const DEFAULTS = { engine: 'auto', lang: 'vi-VN', commands: true, speak: true, persona: 'em-anh', voice: '', mic: '' };
   V.ENGINES = {
     auto: 'Tự động (khuyên dùng)',
     web: 'Trình duyệt – Web Speech API',
@@ -275,7 +275,7 @@
     }
   }
 
-  function webListen(lang, h, ctrl) {
+  function webListen(lang, h, ctrl, track) {
     return new Promise((resolve, reject) => {
       const rec = new SR();
       rec.lang = lang;
@@ -334,11 +334,86 @@
         }
       };
       try {
-        rec.start();
+        if (track) {
+          // Chrome / Edge bản mới: nhận dạng đúng micro đã chọn; bản cũ bỏ qua tham số và dùng micro mặc định
+          try {
+            rec.start(track);
+          } catch (_) {
+            rec.start();
+          }
+        } else rec.start();
       } catch (e) {
         reject(Object.assign(e, { code: 'start-failed' }));
       }
     });
+  }
+
+  // ================================================================ MICRO
+  /** Ràng buộc getUserMedia cho micro đã chọn ('' = mặc định) */
+  const audioConstraints = (deviceId) =>
+    Object.assign({ channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true }, deviceId ? { deviceId: { exact: deviceId } } : {});
+
+  /** Mở micro đã chọn; micro đó không còn (rút ra, đổi máy) → dùng micro mặc định */
+  async function getMicStream(deviceId) {
+    try {
+      return await navigator.mediaDevices.getUserMedia({ audio: audioConstraints(deviceId) });
+    } catch (e) {
+      if (deviceId && (e.name === 'OverconstrainedError' || e.name === 'NotFoundError')) {
+        H && H.toast('Không tìm thấy micro đã chọn – dùng micro mặc định', 'warn');
+        return navigator.mediaDevices.getUserMedia({ audio: audioConstraints('') });
+      }
+      throw e;
+    }
+  }
+  V.getMicStream = getMicStream;
+
+  /** Danh sách micro. Tên thiết bị chỉ có sau khi trang được cấp quyền micro */
+  V.listMics = async function () {
+    try {
+      const all = (await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === 'audioinput');
+      const def = all.find((d) => d.deviceId === 'default');
+      return {
+        defaultLabel: def ? def.label.replace(/^(Default|Mặc định)\s*-\s*/i, '') : '',
+        mics: all.filter((d) => d.deviceId && d.deviceId !== 'default' && d.deviceId !== 'communications'),
+      };
+    } catch (_) {
+      return { defaultLabel: '', mics: [] };
+    }
+  };
+
+  /** Đo âm lượng một luồng micro. onLevel(0..1). voicedMs: tổng thời gian có tiếng, peak: mức to nhất */
+  function levelMeter(stream, onLevel) {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    const ctx = new AC();
+    ctx.resume().catch(() => {});
+    const src = ctx.createMediaStreamSource(stream);
+    const an = ctx.createAnalyser();
+    an.fftSize = 1024;
+    src.connect(an);
+    const buf = new Float32Array(an.fftSize);
+    let last = performance.now();
+    const m = { voicedMs: 0, peak: 0 };
+    const timer = setInterval(() => {
+      an.getFloatTimeDomainData(buf);
+      let e = 0;
+      for (let i = 0; i < buf.length; i++) e += buf[i] * buf[i];
+      const l = Math.min(1, Math.sqrt(e / buf.length) * 8);
+      const now = performance.now();
+      if (l > 0.12) m.voicedMs += now - last;
+      last = now;
+      m.peak = Math.max(m.peak, l);
+      onLevel && onLevel(l);
+    }, 50);
+    m.close = () => {
+      clearInterval(timer);
+      try {
+        src.disconnect();
+      } catch (_) {
+        /* ignore */
+      }
+      ctx.close().catch(() => {});
+    };
+    return m;
   }
 
   // ============================================ NHẬN DẠNG OFFLINE: MOONSHINE + SILERO VAD
@@ -488,7 +563,7 @@ registerProcessor('de-mic', DEMic);
   }
 
   async function openMic(onPcm, onLevel) {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+    const stream = await getMicStream(cfg().mic);
     const AC = window.AudioContext || window.webkitAudioContext;
     // Ưu tiên để trình duyệt tự hạ tần số mẫu xuống 16 kHz (chất lượng tốt hơn); Firefox không cho nối
     // micro vào AudioContext khác tần số → dùng tần số mặc định + bộ hạ tần số tự viết.
@@ -599,6 +674,7 @@ registerProcessor('de-mic', DEMic);
   // ================================================================ ĐIỀU KHIỂN
   let H = null; // hooks từ ui.js
   let session = null; // { ctrl, kind }
+  let skipDownloadAsk = false;
   let handsFree = false, hfLastHeard = 0, opDepth = 0, confirmAsked = false, confirmTries = 0, undoTipSaid = false, draft = null;
   const $ = (q) => document.querySelector(q);
 
@@ -667,7 +743,9 @@ registerProcessor('de-mic', DEMic);
       return null;
     }
     if (local.ready === (ASR_MODELS[lang2()] || ASR_MODELS.vi)) return 'local';
-    if (!(await V.localCached())) {
+    const asked = skipDownloadAsk;
+    skipDownloadAsk = false;
+    if (!asked && !(await V.localCached())) {
       const ok = await H.confirm({
         title: 'Tải bộ nhận dạng giọng nói offline?',
         message:
@@ -711,6 +789,29 @@ registerProcessor('de-mic', DEMic);
       return idleStatus();
     }
     V.stopSpeaking();
+    // Web Speech: mở song song micro đã chọn để đo âm lượng (hiệu ứng nút mic + chẩn đoán khi nghe hụt)
+    // và truyền track cho trình duyệt hỗ trợ chọn micro.
+    let mon = null, monStream = null;
+    const levelFx = (l) => {
+      const b = $('#ai-mic');
+      b && b.style.setProperty('--lvl', l.toFixed(2));
+    };
+    if (engine === 'web' && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      try {
+        monStream = await getMicStream(cfg().mic);
+        mon = levelMeter(monStream, levelFx);
+      } catch (_) {
+        /* không đo được – vẫn nghe bằng Web Speech (lỗi quyền micro sẽ báo ở bước sau) */
+      }
+    }
+    const closeMon = () => {
+      if (mon) mon.close();
+      if (monStream) monStream.getTracks().forEach((t) => t.stop());
+    };
+    if (!session) {
+      closeMon();
+      return idleStatus();
+    }
     const ctrl = session.ctrl;
     session.pending = false;
     if (kind === 'prompt') draft = ta() ? ta().value : '';
@@ -722,10 +823,7 @@ registerProcessor('de-mic', DEMic);
         else setStatus('Nghe được: ' + t, 'rec');
       },
       onSpeech: () => (hfLastHeard = Date.now()),
-      onLevel: (l) => {
-        const b = $('#ai-mic');
-        b && b.style.setProperty('--lvl', l.toFixed(2));
-      },
+      onLevel: levelFx,
       onStatus: (s) => {
         if (s === 'transcribing') {
           setMic('processing', 'Đang nhận dạng…');
@@ -734,9 +832,12 @@ registerProcessor('de-mic', DEMic);
       },
     };
     let text;
+    const micTrack = cfg().mic && monStream ? monStream.getAudioTracks()[0] : null;
+    const micLabel = monStream && monStream.getAudioTracks()[0] ? monStream.getAudioTracks()[0].label : '';
     try {
-      text = engine === 'web' ? await webListen(cfg().lang, handlers, ctrl) : await localListen(handlers, ctrl);
+      text = engine === 'web' ? await webListen(cfg().lang, handlers, ctrl, micTrack) : await localListen(handlers, ctrl);
     } catch (e) {
+      closeMon();
       session = null;
       restoreDraft();
       idleStatus();
@@ -745,6 +846,8 @@ registerProcessor('de-mic', DEMic);
       if (handsFree) setHandsFree(false, true);
       return;
     }
+    const voiced = mon ? mon.voicedMs : -1, peak = mon ? mon.peak : -1;
+    closeMon();
     session = null;
     const t = ta();
     t && t.classList.remove('interim');
@@ -757,6 +860,11 @@ registerProcessor('de-mic', DEMic);
       restoreDraft();
       idleStatus();
       if (kind === 'confirm') return confirmRetry();
+      // micro có tiếng nói mà trình duyệt không trả chữ → dịch vụ nhận dạng của trình duyệt không hoạt động
+      if (engine === 'web' && voiced > 700) {
+        if (handsFree) setHandsFree(false, true);
+        return suggestOffline(micLabel);
+      }
       if (handsFree) {
         if (Date.now() - hfLastHeard > HANDSFREE_IDLE_MS) {
           setHandsFree(false, true);
@@ -764,11 +872,32 @@ registerProcessor('de-mic', DEMic);
         }
         return setTimeout(() => handsFree && listen('prompt'), 150);
       }
-      return H.toast('Không nghe thấy gì – thử nói lại gần micro hơn', 'info');
+      if (peak >= 0 && peak < 0.05)
+        return H.toast(`Micro “${micLabel || 'mặc định'}” không thu được âm thanh nào – chọn micro khác: chuột phải vào 🎤 → Micro`, 'warn');
+      return H.toast('Không nghe thấy gì – thử nói lại gần micro hơn (chọn micro: chuột phải vào 🎤)', 'info');
     }
     hfLastHeard = Date.now();
     idleStatus();
     await handleUtterance(text, kind);
+  }
+
+  async function suggestOffline(micLabel) {
+    const ok = await H.confirm({
+      title: 'Trình duyệt không nhận dạng được giọng nói',
+      message:
+        `Micro${micLabel ? ' “' + micLabel + '”' : ''} có thu được tiếng nói nhưng dịch vụ nhận dạng của trình duyệt không trả về chữ nào. ` +
+        'Thường gặp trên trình duyệt nhân Chromium không phải Chrome / Edge (Cốc Cốc, Brave, Opera…), khi mạng chặn dịch vụ nhận dạng, ' +
+        'hoặc khi trình duyệt dùng một micro khác micro bạn chọn.\n\n' +
+        'Chuyển sang bộ nhận dạng Offline? (Moonshine – tải khoảng 45 MB một lần, chạy ngay trên máy, âm thanh không rời khỏi máy.)',
+      ok: 'Chuyển sang Offline',
+      cancel: 'Để sau',
+    });
+    if (!ok) return;
+    const c = cfg();
+    c.engine = 'local';
+    V.save(c);
+    skipDownloadAsk = true;
+    listen('prompt');
   }
 
   async function handleUtterance(text, kind) {
@@ -984,6 +1113,9 @@ registerProcessor('de-mic', DEMic);
       `<h3 id="voice-title">Cài đặt giọng nói</h3>` +
       `<label class="f"><span>Bộ nhận dạng</span><select id="v-engine">${opts(V.ENGINES, c.engine)}</select></label>` +
       `<div id="v-engine-info" class="msg v-info"></div>` +
+      `<div class="f"><span>Micro</span><div class="v-microw"><select id="v-mic"></select>` +
+      `<button type="button" class="btn" data-r="mictest">🎤 Thử micro</button></div>` +
+      `<div class="v-meter" id="v-meter" hidden><span></span></div><div id="v-mic-info" class="msg"></div></div>` +
       `<label class="f"><span>Ngôn ngữ</span><select id="v-lang">${opts(V.LANGS, c.lang)}</select></label>` +
       `<label class="chk"><input type="checkbox" id="v-commands"${c.commands ? ' checked' : ''}> Lệnh giọng nói (câu ngắn như “hoàn tác”, “vừa màn hình” chạy ngay, không gửi AI)</label>` +
       `<details class="v-cmds"><summary>Danh sách lệnh</summary><table class="keys">${cmdRows}</table></details>` +
@@ -1002,7 +1134,53 @@ registerProcessor('de-mic', DEMic);
       speak: q('#v-speak').checked,
       persona: q('#v-persona').value,
       voice: q('#v-voice').value,
+      mic: q('#v-mic').value,
     });
+    // ---- chọn & thử micro
+    let micTest = null;
+    async function renderMics() {
+      const sel = q('#v-mic'), want = sel.dataset.ready ? sel.value : cfg().mic;
+      const { defaultLabel, mics } = await V.listMics();
+      sel.innerHTML =
+        `<option value="">Mặc định của hệ thống${defaultLabel ? ' – ' + esc(defaultLabel) : ''}</option>` +
+        mics.map((d, i) => `<option value="${esc(d.deviceId)}">${esc(d.label || 'Micro ' + (i + 1))}</option>`).join('');
+      sel.value = mics.some((d) => d.deviceId === want) ? want : '';
+      sel.dataset.ready = '1';
+      if (micTest) return;
+      const info = q('#v-mic-info');
+      if (want && sel.value !== want) info.textContent = 'Micro đã chọn trước đây hiện không cắm – đang dùng micro mặc định.';
+      else if (mics.length && !mics.some((d) => d.label)) info.textContent = 'Bấm “Thử micro” và cho phép truy cập micro để thấy tên các thiết bị.';
+      else if (!mics.length) info.textContent = 'Không tìm thấy micro nào trên máy.';
+      else info.textContent = V.webSupported ? 'Web Speech dùng đúng micro này trên Chrome / Edge bản mới; bản cũ luôn dùng micro mặc định của trình duyệt.' : '';
+    }
+    function stopMicTest() {
+      if (micTest) {
+        micTest.m.close();
+        micTest.s.getTracks().forEach((t) => t.stop());
+        micTest = null;
+      }
+      q('#v-meter').hidden = true;
+      q('[data-r="mictest"]').textContent = '🎤 Thử micro';
+    }
+    async function startMicTest() {
+      stopMicTest();
+      const info = q('#v-mic-info'), bar = q('#v-meter span');
+      try {
+        const s = await getMicStream(q('#v-mic').value);
+        if (!back.isConnected) return s.getTracks().forEach((t) => t.stop());
+        const m = levelMeter(s, (l) => (bar.style.width = Math.round(l * 100) + '%'));
+        micTest = { s, m };
+        q('#v-meter').hidden = false;
+        q('[data-r="mictest"]').textContent = '■ Dừng thử';
+        await renderMics(); // đã có quyền → hiện tên thiết bị
+        const track = s.getAudioTracks()[0];
+        info.textContent = `Đang thử: ${track ? track.label : 'micro'} – nói vài câu, thanh màu xanh nhảy theo giọng là micro đúng.`;
+      } catch (e) {
+        info.textContent = e.name === 'NotAllowedError' ? 'Trình duyệt chưa cho phép dùng micro – bấm biểu tượng 🔒 / micro trên thanh địa chỉ để cho phép.' : 'Không mở được micro: ' + (e.message || e.name);
+      }
+    }
+    const onDeviceChange = () => renderMics();
+    if (navigator.mediaDevices && navigator.mediaDevices.addEventListener) navigator.mediaDevices.addEventListener('devicechange', onDeviceChange);
     async function renderEngineInfo() {
       const e = q('#v-engine').value, lang = q('#v-lang').value;
       const lines = [];
@@ -1032,6 +1210,8 @@ registerProcessor('de-mic', DEMic);
     }
     const close = () => {
       window.removeEventListener('keydown', onKey, true);
+      stopMicTest();
+      if (navigator.mediaDevices && navigator.mediaDevices.removeEventListener) navigator.mediaDevices.removeEventListener('devicechange', onDeviceChange);
       V.onVoices = null;
       back.remove();
     };
@@ -1043,7 +1223,9 @@ registerProcessor('de-mic', DEMic);
       }
     };
     back.addEventListener('change', (e) => {
-      if (e.target.id === 'v-lang') {
+      if (e.target.id === 'v-mic') {
+        if (micTest) startMicTest();
+      } else if (e.target.id === 'v-lang') {
         renderVoices();
         renderEngineInfo();
       } else if (e.target.id === 'v-engine') renderEngineInfo();
@@ -1052,7 +1234,10 @@ registerProcessor('de-mic', DEMic);
       const b = e.target.closest('[data-r]');
       if ((b && b.dataset.r === 'cancel') || e.target === back) return close();
       if (!b) return;
-      if (b.dataset.r === 'test') {
+      if (b.dataset.r === 'mictest') {
+        if (micTest) stopMicTest();
+        else startMicTest();
+      } else if (b.dataset.r === 'test') {
         const keep = cfg();
         V.save(Object.assign({}, keep, draftCfg()));
         V.stopSpeaking();
@@ -1069,6 +1254,7 @@ registerProcessor('de-mic', DEMic);
     document.body.appendChild(back);
     renderVoices();
     renderEngineInfo();
+    renderMics();
     q('#v-engine').focus();
   };
 

@@ -929,3 +929,10 @@ button.help-thumb:hover { border-color: var(--accent); background: var(--accent-
 .v-cmds table { margin-top: 6px; display: block; max-height: 210px; overflow-y: auto; }
 .ai-modal .modal-actions .ai-voice-link { margin-right: auto; }
 @media (prefers-reduced-motion: reduce) { .ai-mic.listening, .ai-voice-dot, .ai-mic.loading::after, .ai-mic.processing::after { animation: none; } }
+.v-microw { display: flex; gap: 8px; align-items: center; }
+.v-microw select { flex: 1; min-width: 0; }
+.v-microw .btn { flex-shrink: 0; height: 32px; white-space: nowrap; }
+.v-meter { height: 6px; margin-top: 6px; border-radius: 3px; background: var(--hover); overflow: hidden; }
+.v-meter[hidden] { display: none; }
+.v-meter span { display: block; height: 100%; width: 0; background: var(--ok); border-radius: 3px; transition: width .05s linear; }
+#v-mic-info { margin-top: 4px; }
