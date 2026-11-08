@@ -199,9 +199,18 @@ Khi nghe xong mà không có chữ nào, app tự chẩn đoán:
 
 ### Giọng đọc
 
-Dùng `speechSynthesis` của trình duyệt. Máy chưa có giọng tiếng Việt thì phản hồi hiện thành chữ; cài thêm ở
-Windows → Cài đặt → Thời gian & ngôn ngữ → Giọng nói → Thêm giọng → Tiếng Việt, hoặc mở app bằng Microsoft Edge
-(có sẵn giọng HoaiMy / NamMinh). Chọn giọng và “Nghe thử” trong Cài đặt giọng nói.
+Mặc định dùng **[ResponsiveVoice](https://responsivevoice.org)** (giọng “Vietnamese Female”): máy có giọng tiếng
+Việt thì đọc bằng giọng đó, không có thì đọc qua máy chủ ResponsiveVoice – nên đọc được cả trên máy chưa cài giọng.
+SDK chỉ được nạp khi cần (không chặn app, không ảnh hưởng chạy offline). API key nằm trong `js/voice.js`
+(`RV_KEY`) và **chỉ chạy trên tên miền đã khai báo trong dashboard ResponsiveVoice**.
+
+ResponsiveVoice không tải được / bị chặn tên miền / mất mạng → tự chuyển sang `speechSynthesis` của trình duyệt →
+không có giọng nào thì hiện thành chữ. Trong Cài đặt giọng nói có thể chọn hẳn một giọng ResponsiveVoice hoặc giọng
+của máy, và bấm “Nghe thử” để biết đã đọc bằng nguồn nào. Cài thêm giọng tiếng Việt cho máy: Windows → Cài đặt →
+Thời gian & ngôn ngữ → Giọng nói → Thêm giọng → Tiếng Việt (Microsoft Edge có sẵn giọng HoaiMy / NamMinh).
+
+> Giọng đọc online: [ResponsiveVoice-NonCommercial](https://responsivevoice.org) licensed under
+> [CC BY-NC-ND 4.0](https://creativecommons.org/licenses/by-nc-nd/4.0/).
 
 ## Phím tắt
 

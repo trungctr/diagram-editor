@@ -1407,7 +1407,7 @@
         `<p>Bấm micro trong khung chat hoặc <b>Ctrl+M</b> rồi nói – nói xong app tự gửi cho AI và đáp lại bằng giọng nói. <b>Ctrl+Shift+M</b>: rảnh tay (nghe liên tục). Chuột phải vào micro: cài đặt giọng nói.</p>` +
         `<p>Câu ngắn khớp nguyên câu dưới đây là <b>lệnh</b>, chạy ngay không gọi AI. Khi app hỏi xác nhận, nói “đồng ý” hoặc “huỷ”.</p><table class="keys">` +
         DE.voice.COMMANDS.map((c) => `<tr data-search="${esc((c.label + ' ' + c.say.join(' ') + ' giọng nói lệnh').toLowerCase())}"><td>${esc(c.label)}</td><td>${c.say.map((x) => '“' + esc(x) + '”').join(', ')}</td></tr>`).join('') +
-        `</table></section>`;
+        `</table><p class="hint">Giọng đọc online: <a href="https://responsivevoice.org" target="_blank" rel="noopener">ResponsiveVoice-NonCommercial</a> licensed under <a href="https://creativecommons.org/licenses/by-nc-nd/4.0/" target="_blank" rel="noopener">CC BY-NC-ND 4.0</a></p></section>`;
     }
 
     // phím tắt

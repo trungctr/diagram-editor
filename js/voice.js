@@ -215,28 +215,113 @@
       .filter((v) => (v.lang || '').replace('_', '-').toLowerCase().startsWith(want))
       .sort((a, b) => /natural|online|neural/i.test(b.name) - /natural|online|neural/i.test(a.name));
   };
-  function pickVoice() {
-    const list = V.voicesFor();
-    const c = cfg();
-    return list.find((v) => v.voiceURI === c.voice) || list[0] || null;
+  // ---- ResponsiveVoice: giọng tiếng Việt cho cả máy không cài giọng (đọc qua máy chủ của họ).
+  // Nạp SDK khi cần (không chặn app, không ảnh hưởng chạy offline); lỗi / bị chặn tên miền → giọng của máy → hiện chữ.
+  const RV_SRC = 'https://cdn.responsivevoice.org/sdk/latest/responsivevoice.js';
+  const RV_KEY = 'QzhXX1eV';
+  V.RV_VOICES = { vi: ['Vietnamese Female', 'Vietnamese Male'], en: ['US English Female', 'US English Male', 'UK English Female', 'UK English Male'] };
+  const rv = { state: 'idle', promise: null, fails: 0, broken: false, warned: false }; // idle | loading | ready | failed
+  V.rvStatus = () => ({ state: rv.broken ? 'broken' : rv.state, reason: rv.reason || '' });
+  function loadRV() {
+    if (rv.state === 'ready') return Promise.resolve(window.responsiveVoice);
+    if (rv.promise) return rv.promise;
+    rv.state = 'loading';
+    rv.promise = new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = RV_SRC;
+      s.async = true;
+      const to = setTimeout(() => reject(new Error('Hết thời gian tải ResponsiveVoice')), 15000);
+      s.onload = async () => {
+        clearTimeout(to);
+        try {
+          window.responsiveVoice.init({ apiKey: RV_KEY });
+        } catch (e) {
+          return reject(e);
+        }
+        // không lấy được danh sách giọng (key chưa cho phép tên miền này, mạng chặn…) → coi như hỏng ngay
+        let ok = false;
+        for (let i = 0; i < 15 && !ok; i++) {
+          try {
+            let v = window.responsiveVoice.getVoices();
+            if (v && v.then) v = await v;
+            ok = !!(v && v.length);
+          } catch (_) {
+            /* chưa sẵn sàng */
+          }
+          if (!ok) await new Promise((r) => setTimeout(r, 200));
+        }
+        rv.state = 'ready';
+        if (!ok) {
+          rv.broken = true;
+          rv.reason = 'ResponsiveVoice không trả về danh sách giọng – thường do key chưa cho phép tên miền ' + location.hostname + ' (vào dashboard ResponsiveVoice để thêm), hoặc mạng chặn.';
+        }
+        resolve(window.responsiveVoice);
+      };
+      s.onerror = () => {
+        clearTimeout(to);
+        reject(new Error('Không tải được ResponsiveVoice'));
+      };
+      document.head.appendChild(s);
+    }).catch((e) => {
+      rv.state = 'failed';
+      rv.promise = null;
+      throw e;
+    });
+    return rv.promise;
   }
-  let showVisual = (t) => DE.ui && DE.ui.toast('🗣 ' + t, 'info');
-  V.stopSpeaking = () => {
-    try {
-      synth && synth.cancel();
-    } catch (_) {
-      /* ignore */
-    }
-  };
-  /** Đọc một câu. Promise xong khi đọc xong (hoặc hết thời gian chờ). Máy không có giọng hợp ngôn ngữ → hiện chữ */
-  V.speak = function (text, { force = false } = {}) {
+  V.preloadRV = () => loadRV().catch(() => {});
+  /** Đọc bằng ResponsiveVoice. true = đọc được; false = không bắt đầu đọc / lỗi */
+  function speakRV(text, name) {
     return new Promise((resolve) => {
-      if (!text) return resolve();
-      if (!force && !cfg().speak) return resolve();
-      const voice = pickVoice();
+      let started = false, done = false;
+      const fin = (ok) => {
+        if (done) return;
+        done = true;
+        clearTimeout(t0);
+        clearTimeout(t1);
+        resolve(ok);
+      };
+      // 5 giây chưa bắt đầu đọc → coi như hỏng (key chưa cho phép tên miền, mất mạng…)
+      const t0 = setTimeout(() => {
+        if (started) return;
+        try {
+          window.responsiveVoice.cancel();
+        } catch (_) {
+          /* ignore */
+        }
+        fin(false);
+      }, 5000);
+      const t1 = setTimeout(() => fin(true), 5000 + 2500 + text.length * 110);
+      try {
+        window.responsiveVoice.speak(text, name, { rate: 1, onstart: () => (started = true), onend: () => fin(true), onerror: () => fin(false) });
+      } catch (_) {
+        fin(false);
+      }
+    });
+  }
+  const rvUsable = () => !rv.broken && rv.state !== 'failed' && navigator.onLine !== false;
+
+  /** Giọng sẽ dùng: { rv: tên } | { sys: SpeechSynthesisVoice } | null. voicePref: '' (tự động) | 'rv:…' | voiceURI */
+  function pickVoice(voicePref, lang) {
+    const pref = voicePref != null ? voicePref : cfg().voice || '';
+    const L = (lang || cfg().lang || 'vi-VN').slice(0, 2);
+    const sys = V.voicesFor(lang);
+    const rvName = (V.RV_VOICES[L] || V.RV_VOICES.vi)[0];
+    if (pref.startsWith('rv:')) {
+      const name = (V.RV_VOICES[L] || []).includes(pref.slice(3)) ? pref.slice(3) : rvName;
+      return rvUsable() ? { rv: name } : sys[0] ? { sys: sys[0] } : null;
+    }
+    const chosen = sys.find((v) => v.voiceURI === pref);
+    if (chosen) return { sys: chosen };
+    // tự động: ResponsiveVoice (dùng giọng của máy nếu có, không thì đọc qua máy chủ) → giọng của máy
+    if (rvUsable()) return { rv: rvName };
+    return sys[0] ? { sys: sys[0] } : null;
+  }
+  function speakSys(text, voice) {
+    return new Promise((resolve) => {
       if (!synth || !voice) {
         showVisual(text);
-        return resolve();
+        return resolve('visual');
       }
       const u = new SpeechSynthesisUtterance(text);
       u.voice = voice;
@@ -247,7 +332,7 @@
         if (done) return;
         done = true;
         clearTimeout(t);
-        resolve();
+        resolve('system');
       };
       const t = setTimeout(fin, 2500 + text.length * 110);
       u.onend = fin;
@@ -258,6 +343,58 @@
         fin();
       }
     });
+  }
+  let showVisual = (t) => DE.ui && DE.ui.toast('🗣 ' + t, 'info');
+  let ttsChain = Promise.resolve(), ttsGen = 0;
+  V.stopSpeaking = () => {
+    ttsGen++;
+    ttsChain = Promise.resolve();
+    try {
+      synth && synth.cancel();
+    } catch (_) {
+      /* ignore */
+    }
+    try {
+      if (rv.state === 'ready') window.responsiveVoice.cancel();
+    } catch (_) {
+      /* ignore */
+    }
+  };
+  async function speakNow(text, voicePref, gen, lang) {
+    const p = pickVoice(voicePref, lang);
+    if (p && p.rv) {
+      try {
+        await loadRV();
+      } catch (_) {
+        return gen === ttsGen ? speakSys(text, V.voicesFor(lang)[0]) : 'cancelled';
+      }
+      if (gen !== ttsGen) return 'cancelled';
+      if (rv.broken) return speakSys(text, V.voicesFor(lang)[0]);
+      if (await speakRV(text, p.rv)) {
+        rv.fails = 0;
+        return 'rv';
+      }
+      if (gen !== ttsGen) return 'cancelled';
+      if (++rv.fails >= 2) rv.broken = true; // hỏng 2 lần liên tiếp → thôi dùng trong phiên này
+      if (rv.broken && !rv.warned) {
+        rv.warned = true;
+        console.warn('[Diagram Editor] ResponsiveVoice không đọc được – chuyển sang giọng của máy.');
+      }
+      return speakSys(text, V.voicesFor(lang)[0]);
+    }
+    return speakSys(text, p && p.sys);
+  }
+  /**
+   * Đọc một câu (xếp hàng sau câu đang đọc). Promise xong khi đọc xong, trả về cách đã đọc:
+   * 'rv' | 'system' | 'visual' (hiện chữ) | 'off' | 'cancelled'. opts.voice: thử một giọng khác cấu hình.
+   */
+  V.speak = function (text, { force = false, voice = null, lang = null } = {}) {
+    if (!text) return Promise.resolve('off');
+    if (!force && !cfg().speak) return Promise.resolve('off');
+    const gen = ttsGen;
+    const job = () => (gen === ttsGen ? speakNow(text, voice, gen, lang) : 'cancelled');
+    ttsChain = ttsChain.then(job, job);
+    return ttsChain;
   };
   if (synth && synth.addEventListener) synth.addEventListener('voiceschanged', () => V.onVoices && V.onVoices());
 
@@ -1124,6 +1261,7 @@ registerProcessor('de-mic', DEMic);
       `<label class="f"><span>Giọng đọc</span><select id="v-voice"></select></label>` +
       `<button type="button" class="btn" data-r="test" title="Nghe thử">▶ Nghe thử</button></div>` +
       `<div id="v-voice-info" class="msg"></div>` +
+      `<p class="hint v-credit">Giọng đọc online: <a href="https://responsivevoice.org" target="_blank" rel="noopener">ResponsiveVoice-NonCommercial</a> licensed under <a href="https://creativecommons.org/licenses/by-nc-nd/4.0/" target="_blank" rel="noopener">CC BY-NC-ND 4.0</a></p>` +
       `<p class="hint">Phím tắt: <b>Ctrl+M</b> nói một câu · <b>Ctrl+Shift+M</b> bật / tắt rảnh tay · <b>Esc</b> huỷ khi đang nghe.</p>` +
       `<div class="modal-actions"><button class="btn" data-r="cancel">Huỷ</button><button class="btn primary" data-r="apply">Áp dụng</button></div></div>`;
     const q = (s) => back.querySelector(s);
@@ -1195,18 +1333,25 @@ registerProcessor('de-mic', DEMic);
     }
     function renderVoices() {
       const lang = q('#v-lang').value, sel = q('#v-voice'), list = V.voicesFor(lang);
-      const cur = cfg().voice;
-      sel.innerHTML = list.length
-        ? list.map((v) => `<option value="${esc(v.voiceURI)}"${v.voiceURI === cur ? ' selected' : ''}>${esc(v.name)}</option>`).join('')
-        : '<option value="">(máy chưa có giọng phù hợp)</option>';
-      const info = q('#v-voice-info');
-      if (!V.ttsSupported) info.textContent = 'Trình duyệt không hỗ trợ đọc thành tiếng – phản hồi sẽ hiện thành chữ.';
-      else if (!list.length)
-        info.textContent =
+      const cur = sel.dataset.ready ? sel.value : cfg().voice || '';
+      const rvs = V.RV_VOICES[lang.slice(0, 2)] || [];
+      sel.innerHTML =
+        '<option value="">Tự động (ResponsiveVoice → giọng của máy)</option>' +
+        (rvs.length ? `<optgroup label="ResponsiveVoice (online)">${rvs.map((n) => `<option value="rv:${esc(n)}">${esc(n)}</option>`).join('')}</optgroup>` : '') +
+        (list.length ? `<optgroup label="Giọng của máy">${list.map((v) => `<option value="${esc(v.voiceURI)}">${esc(v.name)}</option>`).join('')}</optgroup>` : '');
+      sel.value = [...sel.options].some((o) => o.value === cur) ? cur : '';
+      sel.dataset.ready = '1';
+      const st = V.rvStatus(), lines = [];
+      if (st.state === 'broken') lines.push('⚠ ' + st.reason + ' Đang dùng giọng của máy.');
+      else if (st.state === 'failed') lines.push('⚠ Không tải được ResponsiveVoice (mất mạng / bị chặn) – đang dùng giọng của máy.');
+      else lines.push('ResponsiveVoice dùng giọng của máy nếu có, không thì đọc qua máy chủ ResponsiveVoice (gửi câu cần đọc lên đó, cần mạng).');
+      if (!list.length)
+        lines.push(
           lang === 'vi-VN'
-            ? 'Máy chưa có giọng đọc tiếng Việt – phản hồi sẽ hiện thành chữ. Cài thêm: Windows → Cài đặt → Thời gian & ngôn ngữ → Giọng nói → Thêm giọng → Tiếng Việt; hoặc mở app bằng Microsoft Edge (có sẵn giọng HoaiMy / NamMinh).'
-            : 'No voice for this language – feedback will be shown as text.';
-      else info.textContent = '';
+            ? 'Máy chưa có giọng tiếng Việt. Cài thêm: Windows → Cài đặt → Thời gian & ngôn ngữ → Giọng nói → Thêm giọng → Tiếng Việt; hoặc mở app bằng Microsoft Edge (có sẵn giọng HoaiMy / NamMinh).'
+            : 'This device has no voice for this language.'
+        );
+      q('#v-voice-info').textContent = lines.join('\n');
     }
     const close = () => {
       window.removeEventListener('keydown', onKey, true);
@@ -1238,11 +1383,24 @@ registerProcessor('de-mic', DEMic);
         if (micTest) stopMicTest();
         else startMicTest();
       } else if (b.dataset.r === 'test') {
-        const keep = cfg();
-        V.save(Object.assign({}, keep, draftCfg()));
-        V.stopSpeaking();
-        V.speak(phrase('test'), { force: true });
+        const d = draftCfg(), keep = cfg();
+        V.save(Object.assign({}, keep, d)); // câu thử theo xưng hô / ngôn ngữ đang chọn
+        const text = phrase('test');
         V.save(keep);
+        V.stopSpeaking();
+        const info = q('#v-voice-info');
+        info.textContent = 'Đang đọc thử…';
+        V.speak(text, { force: true, voice: d.voice, lang: d.lang }).then((how) => {
+          if (!back.isConnected) return;
+          renderVoices();
+          const st = V.rvStatus();
+          const msg = {
+            rv: '✓ Đã đọc bằng ResponsiveVoice.',
+            system: '✓ Đã đọc bằng giọng của máy.' + (st.state === 'broken' || st.state === 'failed' ? ' (ResponsiveVoice không dùng được – xem ghi chú dưới.)' : ''),
+            visual: '✗ Không có giọng nào đọc được – phản hồi sẽ hiện thành chữ.',
+          }[how];
+          if (msg) info.textContent = msg + '\n' + info.textContent;
+        });
       } else if (b.dataset.r === 'apply') {
         V.save(Object.assign(cfg(), draftCfg()));
         close();
@@ -1262,6 +1420,9 @@ registerProcessor('de-mic', DEMic);
   V.init = function (hooks) {
     H = hooks;
     showVisual = (t) => H.toast('🗣 ' + t, 'info');
+    // nạp sẵn ResponsiveVoice (không chặn app) để câu phản hồi đầu tiên đọc được ngay
+    const c0 = cfg();
+    if (c0.speak && (!c0.voice || c0.voice.startsWith('rv:'))) setTimeout(V.preloadRV, 2500);
     setMic('');
     renderHF();
     const mic = $('#ai-mic');

@@ -936,3 +936,5 @@ button.help-thumb:hover { border-color: var(--accent); background: var(--accent-
 .v-meter[hidden] { display: none; }
 .v-meter span { display: block; height: 100%; width: 0; background: var(--ok); border-radius: 3px; transition: width .05s linear; }
 #v-mic-info { margin-top: 4px; }
+.v-credit { margin: 6px 0 4px; font-size: 11px; }
+.v-credit a { color: var(--accent); }
